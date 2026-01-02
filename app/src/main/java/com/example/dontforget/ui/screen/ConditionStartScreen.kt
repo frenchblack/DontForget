@@ -29,10 +29,26 @@ fun ConditionStartScreen(
     val loaded_text_map = vm.start_value_text_map.collectAsStateWithLifecycle().value
 
     // ✅ 통계용 코드(드롭다운) 저장 맵: condition_def_id -> code
-    val value_code_map = remember { mutableStateMapOf<Long, String>() }
+    val value_code_map = remember(sessionId) { mutableStateMapOf<Long, String>() }
+    val value_text_map = remember(sessionId) { mutableStateMapOf<Long, String>() }
 
-    // ✅ 추가 설명 텍스트(value) 저장 맵: condition_def_id -> memo
-    val value_text_map = remember { mutableStateMapOf<Long, String>() }
+    // ✅ LEVEL_5 기본값: "보통" 자동 세팅 (처음 진입 시)
+    LaunchedEffect(defs, sessionId) {
+        if (defs.isEmpty()) return@LaunchedEffect
+
+        // "보통"에 해당하는 enum을 하나 고정으로 찾기
+        // (ConditionLevel에 NORMAL/OK 같은 이름이 뭔지 몰라서, label로 찾되 1회만)
+        val default_level = ConditionLevel.entries.firstOrNull { it.label == "보통" } ?: return@LaunchedEffect
+
+        defs
+            .filter { it.input_type == InputType.LEVEL_5 }
+            .forEach { def ->
+                // 이미 저장/로드된 값이 있으면 건드리지 않음
+                if (value_code_map[def.condition_def_id].isNullOrBlank()) {
+                    value_code_map[def.condition_def_id] = default_level.code
+                }
+            }
+    }
 
     // 세션 진입 시 DB 값 로드 (이어하기)
     LaunchedEffect(sessionId) {
@@ -43,12 +59,11 @@ fun ConditionStartScreen(
     // 로드된 값을 화면 입력용 map에 주입
     LaunchedEffect(loaded_code_map, loaded_text_map) {
         // 이미 사용자가 입력 중이면 덮어쓰지 않음
-        if (value_code_map.isEmpty()) {
-            value_code_map.putAll(loaded_code_map)
-        }
-        if (value_text_map.isEmpty()) {
-            value_text_map.putAll(loaded_text_map)
-        }
+        value_code_map.clear()
+        value_code_map.putAll(loaded_code_map)
+
+        value_text_map.clear()
+        value_text_map.putAll(loaded_text_map)
     }
 
     // ✅ TextField 글자/라벨/커서/배경을 "무조건" 검정/흰색으로 고정

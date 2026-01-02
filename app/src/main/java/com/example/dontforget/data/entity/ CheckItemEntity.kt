@@ -34,6 +34,16 @@ data class CheckItemEntity(
     val mistake_count: Int = 0,
 
     @ColumnInfo(name = "revert_count")
-    val revert_count: Int = 0
+    val revert_count: Int = 0,
+
+    // ✅ 추가: 연습중 카운트들
+    @ColumnInfo(name = "practice_success_count")
+    val practice_success_count: Int = 0,
+
+    @ColumnInfo(name = "practice_fail_count")
+    val practice_fail_count: Int = 0,
+
+    @ColumnInfo(name = "practice_revert_count")
+    val practice_revert_count: Int = 0
 
 )

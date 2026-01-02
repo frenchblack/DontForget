@@ -9,13 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.RunViewModel
 import com.example.dontforget.ui.vm.RunViewModel.RunStep
-import com.example.dontforget.ui.screen.ConditionStartScreen
 
 @Composable
 fun RunScreen(
     vm: RunViewModel,
+    items_vm: ItemsViewModel,
     modifier: Modifier = Modifier
 ) {
     val in_progress by vm.in_progress.collectAsStateWithLifecycle()
@@ -56,18 +57,28 @@ fun RunScreen(
             }
 
             RunStep.CONDITION_START -> {
-                // ✅ 지금은 컨디션 입력 UI “껍데기”부터
                 ConditionStartScreen(
                     vm = vm,
                     sessionId = current_session_id,
                     onSave = {
-                        // 다음 단계에서 DB 저장 붙일 거임
-                        // 저장 후: 체크리스트(프로세스/컴플리트) 화면으로 넘어가는 걸로 확장
-                        vm.go_home() // 임시: 저장하면 홈으로
+                        // ✅ save_condition_start 내부에서 RUN_ITEMS로 이동하므로 여기선 아무것도 안 함
                     },
                     onCancel = {
-                        // 시작 컨디션 화면에서 뒤로
                         vm.go_home()
+                    }
+                )
+            }
+
+            RunStep.RUN_ITEMS -> {
+                RunItemsScreen(
+                    items_vm = items_vm,
+                    sessionId = current_session_id,
+                    onFinish = {
+                        vm.finish_current()
+                        vm.go_home()
+                    },
+                    onBack = {
+                        vm.go_condition_start()
                     }
                 )
             }
@@ -141,4 +152,3 @@ fun RunScreen(
         )
     }
 }
-

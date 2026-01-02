@@ -59,7 +59,11 @@ fun AppRoot(    items_vm: ItemsViewModel,
         }
     ) { padding ->
         when (tab) {
-            Tab.RUN -> RunScreen(vm = run_vm, modifier = Modifier.padding(padding))
+            Tab.RUN -> RunScreen(
+                vm = run_vm,
+                items_vm = items_vm,
+                modifier = Modifier.padding(padding)
+            )
             Tab.ITEMS -> ItemsScreen(vm = items_vm, modifier = Modifier.padding(padding))
         }
     }

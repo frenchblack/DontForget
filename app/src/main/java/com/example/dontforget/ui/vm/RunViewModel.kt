@@ -108,7 +108,10 @@ class RunViewModel(
                 session_id = session_id,
                 items = items
             )
+            _start_value_code_map.value = items.associate { it.condition_def_id to it.value_code }
+            _start_value_text_map.value = items.associate { it.condition_def_id to it.value }
 
+            _step.value = RunStep.RUN_ITEMS // ✅ 저장 끝나면 다음 화면
             on_done()
         }
     }
@@ -127,8 +130,13 @@ class RunViewModel(
         _start_value_text_map.value = emptyMap()
     }
 
+    fun go_run_items() {
+        _step.value = RunStep.RUN_ITEMS
+    }
+
     enum class RunStep {
         HOME,
-        CONDITION_START
+        CONDITION_START ,
+        RUN_ITEMS // ✅ 추가: 체크리스트 진행 화면
     }
 }
