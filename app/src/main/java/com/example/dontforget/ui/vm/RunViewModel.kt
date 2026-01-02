@@ -151,10 +151,15 @@ class RunViewModel(
         _step.value = RunStep.RUN_ITEMS
     }
 
+    fun go_today_summary() {
+        _step.value = RunStep.TODAY_SUMMARY
+    }
+
     enum class RunStep {
         HOME,
         CONDITION_START ,
         RUN_ITEMS, // ✅ 추가: 체크리스트 진행 화면,
-        FINISH_SUMMARY   // ✅ 연습 종료 요약 화면
+        FINISH_SUMMARY,   // ✅ 연습 종료 요약 화면
+        TODAY_SUMMARY
     }
 }

@@ -9,12 +9,14 @@ import com.example.dontforget.ui.screen.ItemsScreen
 import com.example.dontforget.ui.screen.RunScreen
 import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.RunViewModel
+import com.example.dontforget.ui.vm.TodaySummaryViewModel
 
 private enum class Tab { RUN, ITEMS }
 
 @Composable
 fun AppRoot(    items_vm: ItemsViewModel,
-                run_vm: RunViewModel
+                run_vm: RunViewModel,
+                today_vm: TodaySummaryViewModel
 ) {
     var tab by remember { mutableStateOf(Tab.RUN) }
 
@@ -62,6 +64,7 @@ fun AppRoot(    items_vm: ItemsViewModel,
             Tab.RUN -> RunScreen(
                 vm = run_vm,
                 items_vm = items_vm,
+                today_vm = today_vm,
                 modifier = Modifier.padding(padding)
             )
             Tab.ITEMS -> ItemsScreen(vm = items_vm, modifier = Modifier.padding(padding))

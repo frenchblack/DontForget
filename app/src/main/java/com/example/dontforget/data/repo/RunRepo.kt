@@ -53,4 +53,20 @@ class RunRepo(
             phase = ConditionPhase.START
         )
     }
+
+    suspend fun save_conditions(
+        session_id: Long,
+        phase: ConditionPhase,
+        items: List<RunConditionEntity>
+    ) {
+        condition_dao.delete_by_session_phase(session_id = session_id, phase = phase)
+        if (items.isNotEmpty()) condition_dao.insert_all(items)
+    }
+
+    suspend fun get_conditions(
+        session_id: Long,
+        phase: ConditionPhase
+    ): List<RunConditionEntity> {
+        return condition_dao.get_by_session_phase(session_id = session_id, phase = phase)
+    }
 }

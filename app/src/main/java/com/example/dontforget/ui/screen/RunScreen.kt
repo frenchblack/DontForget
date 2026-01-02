@@ -12,11 +12,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.RunViewModel
 import com.example.dontforget.ui.vm.RunViewModel.RunStep
+import com.example.dontforget.ui.vm.TodaySummaryViewModel
 
 @Composable
 fun RunScreen(
     vm: RunViewModel,
     items_vm: ItemsViewModel,
+    today_vm: TodaySummaryViewModel,   // ✅ 추가
     modifier: Modifier = Modifier
 ) {
     val in_progress by vm.in_progress.collectAsStateWithLifecycle()
@@ -89,13 +91,20 @@ fun RunScreen(
                     items_vm = items_vm,
                     sessionId = current_session_id,
                     onGoTodaySummary = {
-                        // TODO: 오늘요약 화면 만들면 여기 연결
-                        vm.go_home() // 임시
+                        vm.go_today_summary()
                     },
                     onGoHome = {
-                        // 요약에서 홈으로 빠질 때 세션 정리하고 싶으면 여기서 처리
                         vm.go_home()
                     }
+                )
+            }
+
+            RunStep.TODAY_SUMMARY -> {
+                TodaySummaryInputScreen(
+                    vm = today_vm,
+                    sessionId = current_session_id,
+                    onCancel = { vm.go_home() },
+                    onSaveDone = { vm.go_home() } // 나중에 오늘요약 화면으로 바꾸면 됨
                 )
             }
         }

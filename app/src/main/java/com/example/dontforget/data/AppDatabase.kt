@@ -6,8 +6,10 @@ import androidx.room.TypeConverters
 import com.example.dontforget.data.dao.CheckItemDao
 import com.example.dontforget.data.dao.RunDao
 import com.example.dontforget.data.dao.ConditionDefinitionDao
+import com.example.dontforget.data.dao.ResultDefinitionDao
 import com.example.dontforget.data.dao.RunConditionDao
 import com.example.dontforget.data.dao.RunItemProgressDao
+import com.example.dontforget.data.dao.RunSummaryDao
 import com.example.dontforget.data.db.Converters
 import com.example.dontforget.data.entity.CheckItemEntity
 import com.example.dontforget.data.entity.ConditionDefinitionEntity
@@ -29,7 +31,7 @@ import com.example.dontforget.data.entity.RunSummaryEntity
         ConditionDefinitionEntity::class,
         ResultDefinitionEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -40,6 +42,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun condision_dao(): ConditionDefinitionDao
     abstract fun run_condition_dao(): RunConditionDao
     abstract fun run_item_progress_dao(): RunItemProgressDao
+
+    // ✅ 오늘정리(자기평가)
+    abstract fun result_definition_dao(): ResultDefinitionDao
+    abstract fun run_summary_dao(): RunSummaryDao
 
     // abstract fun run_dao(): RunDao
 }

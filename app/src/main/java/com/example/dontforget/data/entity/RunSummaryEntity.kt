@@ -38,8 +38,13 @@ data class RunSummaryEntity(
     @ColumnInfo(name = "result_def_id")
     val result_def_id: Long,
 
+    // LEVEL_5면 "1~5" 같은 코드 저장용
+    @ColumnInfo(name = "value_code")
+    val value_code: String = "",
+
+    // 메모/텍스트 저장용
     @ColumnInfo(name = "value")
-    val value: String,
+    val value: String = "",
 
     @ColumnInfo(name = "created_at")
     val created_at: Long = System.currentTimeMillis()

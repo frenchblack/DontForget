@@ -11,8 +11,10 @@ import com.example.dontforget.data.AppDatabase
 import com.example.dontforget.data.entity.CheckItemEntity
 import com.example.dontforget.data.entity.ConditionDefinitionEntity
 import com.example.dontforget.data.entity.InputType
+import com.example.dontforget.data.entity.ResultDefinitionEntity
 import com.example.dontforget.data.repo.CheckItemRepo
 import com.example.dontforget.data.repo.ConditionDefinitionRepo
+import com.example.dontforget.data.repo.ResultRepo
 import com.example.dontforget.data.repo.RunRepo
 import com.example.dontforget.ui.AppRoot
 import com.example.dontforget.ui.theme.DontForgetTheme
@@ -20,6 +22,8 @@ import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.ItemsVmFactory
 import com.example.dontforget.ui.vm.RunViewModel
 import com.example.dontforget.ui.vm.RunVmFactory
+import com.example.dontforget.ui.vm.TodaySummaryViewModel
+import com.example.dontforget.ui.vm.TodaySummaryVmFactory
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -48,7 +52,14 @@ class MainActivity : ComponentActivity() {
             if (condition_def_dao.count_all() == 0) {
                 condition_def_dao.insert_all(seed_condition_definitions())
             }
+
+            // ✅ 결과 정의 시드 (여기도 코루틴 안에서!)
+            val result_def_dao = db.result_definition_dao()
+            if (result_def_dao.count_all() == 0) {
+                result_def_dao.insert_all(seed_result_definitions())
+            }
         }
+
 
         // ✅ Items VM
         val repo = CheckItemRepo(
@@ -68,14 +79,27 @@ class MainActivity : ComponentActivity() {
             condition_def_repo = condition_def_repo
         )
 
+        val result_repo = ResultRepo(
+            def_dao = db.result_definition_dao(),
+            summary_dao = db.run_summary_dao()
+        )
+
+        val today_factory = TodaySummaryVmFactory(
+            run_repo = run_repo,
+            condition_def_repo = condition_def_repo,
+            result_repo = result_repo
+        )
+
         setContent {
             DontForgetTheme {
                 val items_vm: ItemsViewModel = viewModel(factory = factory)
                 val run_vm: RunViewModel = viewModel(factory = run_factory)
+                val today_vm: TodaySummaryViewModel = viewModel(factory = today_factory)
 
                 AppRoot(
                     items_vm = items_vm,
-                    run_vm = run_vm
+                    run_vm = run_vm,
+                    today_vm = today_vm
                 )
             }
         }
@@ -251,5 +275,20 @@ private fun seed_condition_definitions(): List<ConditionDefinitionEntity> {
         ConditionDefinitionEntity(name = "코막힘", input_type = InputType.LEVEL_5, sort_order = 3, is_active = 1),
         ConditionDefinitionEntity(name = "수면상태", input_type = InputType.LEVEL_5, sort_order = 4, is_active = 1),
         ConditionDefinitionEntity(name = "몸상태(메모)", input_type = InputType.TEXT, sort_order = 5, is_active = 1)
+    )
+}
+
+private fun seed_result_definitions(): List<ResultDefinitionEntity> {
+    return listOf(
+        ResultDefinitionEntity(name = "호흡", input_type = InputType.LEVEL_5, sort_order = 1, is_active = 1),
+        ResultDefinitionEntity(name = "톤", input_type = InputType.LEVEL_5, sort_order = 2, is_active = 1),
+        ResultDefinitionEntity(name = "고음", input_type = InputType.LEVEL_5, sort_order = 3, is_active = 1),
+        ResultDefinitionEntity(name = "중음", input_type = InputType.LEVEL_5, sort_order = 4, is_active = 1),
+        ResultDefinitionEntity(name = "저음", input_type = InputType.LEVEL_5, sort_order = 5, is_active = 1),
+        ResultDefinitionEntity(name = "음정", input_type = InputType.LEVEL_5, sort_order = 6, is_active = 1),
+        ResultDefinitionEntity(name = "박자", input_type = InputType.LEVEL_5, sort_order = 7, is_active = 1),
+        ResultDefinitionEntity(name = "끝음처리", input_type = InputType.LEVEL_5, sort_order = 8, is_active = 1),
+        ResultDefinitionEntity(name = "만족도", input_type = InputType.LEVEL_5, sort_order = 9, is_active = 1),
+        ResultDefinitionEntity(name = "메모", input_type = InputType.TEXT, sort_order = 10, is_active = 1)
     )
 }
