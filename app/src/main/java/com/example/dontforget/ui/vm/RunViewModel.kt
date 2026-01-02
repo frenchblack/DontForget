@@ -91,6 +91,15 @@ class RunViewModel(
         }
     }
 
+    fun finish_current_go_summary() {
+        val sid = _current_session_id.value ?: return
+        viewModelScope.launch {
+            repo.finish_session(sid)
+            _step.value = RunStep.FINISH_SUMMARY
+            // sessionId는 유지 (요약 화면에서 필요)
+        }
+    }
+
     fun save_condition_start(
         session_id: Long,
         value_code_map: Map<Long, String>,
@@ -145,6 +154,7 @@ class RunViewModel(
     enum class RunStep {
         HOME,
         CONDITION_START ,
-        RUN_ITEMS // ✅ 추가: 체크리스트 진행 화면
+        RUN_ITEMS, // ✅ 추가: 체크리스트 진행 화면,
+        FINISH_SUMMARY   // ✅ 연습 종료 요약 화면
     }
 }

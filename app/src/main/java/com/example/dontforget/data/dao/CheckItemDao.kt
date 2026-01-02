@@ -89,4 +89,14 @@ interface CheckItemDao {
      WHERE item_id = :item_id
 """)
     suspend fun inc_practice_revert(item_id: Long)
+
+    @Query("""
+    UPDATE check_item
+       SET practice_fail_count = CASE 
+            WHEN practice_fail_count > 0 THEN practice_fail_count - 1 
+            ELSE 0 
+           END
+     WHERE item_id = :item_id
+""")
+    suspend fun dec_practice_fail(item_id: Long)
 }

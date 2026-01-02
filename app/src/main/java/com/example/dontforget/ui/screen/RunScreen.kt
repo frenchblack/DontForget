@@ -76,11 +76,25 @@ fun RunScreen(
                     sessionId = current_session_id,
                     startedAt = started_at,
                     onFinish = {
-                        vm.finish_current()
-                        vm.go_home()
+                        vm.finish_current_go_summary()
                     },
                     onBack = {
                         vm.go_condition_start()
+                    }
+                )
+            }
+
+            RunStep.FINISH_SUMMARY -> {
+                FinishSummaryScreen(
+                    items_vm = items_vm,
+                    sessionId = current_session_id,
+                    onGoTodaySummary = {
+                        // TODO: 오늘요약 화면 만들면 여기 연결
+                        vm.go_home() // 임시
+                    },
+                    onGoHome = {
+                        // 요약에서 홈으로 빠질 때 세션 정리하고 싶으면 여기서 처리
+                        vm.go_home()
                     }
                 )
             }

@@ -25,8 +25,12 @@ class RunRepo(
         return dao.insert_session(entity)
     }
 
-    suspend fun finish_session(session_id: Long, now: Long = System.currentTimeMillis()) {
-        dao.finish_session(session_id = session_id, end_time = now, status = RunStatus.COMPLETED)
+    suspend fun finish_session(session_id: Long) {
+        dao.finish_session(
+            session_id = session_id,
+            end_time = System.currentTimeMillis(),
+            status = RunStatus.COMPLETED
+        )
     }
 
     // ✅ START 컨디션 저장 (기존꺼 지우고 다시 insert)

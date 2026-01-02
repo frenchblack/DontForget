@@ -55,6 +55,14 @@ class ItemsViewModel(private val repo: CheckItemRepo) : ViewModel() {
 
     fun revert(item_id: Long) = viewModelScope.launch { repo.revert(item_id) }
 
+    fun add_practice_fail(item_id: Long) = viewModelScope.launch {
+        repo.add_practice_fail(item_id)
+    }
+
+    fun sub_practice_fail(item_id: Long) = viewModelScope.launch {
+        repo.sub_practice_fail(item_id)
+    }
+
     fun practice_add_item(
         session_id: Long,
         title: String,

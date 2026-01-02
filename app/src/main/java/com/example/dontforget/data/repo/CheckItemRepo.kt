@@ -60,6 +60,14 @@ class CheckItemRepo(
         dao.revert_to_active(item_id)
     }
 
+    suspend fun add_practice_fail(item_id: Long) {
+        dao.inc_practice_fail(item_id)
+    }
+
+    suspend fun sub_practice_fail(item_id: Long) {
+        dao.dec_practice_fail(item_id)
+    }
+
     suspend fun practice_add_item(
         session_id: Long,
         title: String,
