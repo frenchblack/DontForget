@@ -38,8 +38,13 @@ data class RunConditionEntity(
     @ColumnInfo(name = "condition_def_id")
     val condition_def_id: Long,
 
+    // ✅ 통계용 선택 코드 (VERY_BAD / BAD / NORMAL / GOOD / VERY_GOOD)
+    @ColumnInfo(name = "value_code")
+    val value_code: String = "",
+
+    // ✅ 추가 설명 / 자유 메모 (기존 value 역할)
     @ColumnInfo(name = "value")
-    val value: String,
+    val value: String = "",
 
     @ColumnInfo(name = "phase")
     val phase: ConditionPhase,

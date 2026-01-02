@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import com.example.dontforget.data.dao.CheckItemDao
 import com.example.dontforget.data.dao.RunDao
 import com.example.dontforget.data.dao.ConditionDefinitionDao
+import com.example.dontforget.data.dao.RunConditionDao
 import com.example.dontforget.data.db.Converters
 import com.example.dontforget.data.entity.CheckItemEntity
 import com.example.dontforget.data.entity.ConditionDefinitionEntity
@@ -25,7 +26,7 @@ import com.example.dontforget.data.entity.RunSummaryEntity
         ConditionDefinitionEntity::class,
         ResultDefinitionEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -34,6 +35,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun check_item_dao(): CheckItemDao
     abstract fun run_dao(): RunDao
     abstract fun condision_dao(): ConditionDefinitionDao
+    abstract fun run_condition_dao(): RunConditionDao
 
     // abstract fun run_dao(): RunDao
 }

@@ -2,26 +2,17 @@ package com.example.dontforget
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.dontforget.data.AppDatabase
 import com.example.dontforget.data.entity.CheckItemEntity
 import com.example.dontforget.data.entity.ConditionDefinitionEntity
 import com.example.dontforget.data.entity.InputType
 import com.example.dontforget.data.repo.CheckItemRepo
+import com.example.dontforget.data.repo.ConditionDefinitionRepo
 import com.example.dontforget.data.repo.RunRepo
 import com.example.dontforget.ui.AppRoot
 import com.example.dontforget.ui.theme.DontForgetTheme
@@ -35,6 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        enableEdgeToEdge()
 
         val db = Room.databaseBuilder(
             applicationContext,
@@ -51,18 +43,27 @@ class MainActivity : ComponentActivity() {
                 check_item_dao.insert_all(seed_check_items())
             }
 
-            // ✅ 컨디션 정의 시드 (DAO/함수명은 네 프로젝트에 맞게)
+            // ✅ 컨디션 정의 시드 (니가 쓰는 메서드명 그대로: condision_dao())
             val condition_def_dao = db.condision_dao()
             if (condition_def_dao.count_all() == 0) {
                 condition_def_dao.insert_all(seed_condition_definitions())
             }
         }
 
+        // ✅ Items VM
         val repo = CheckItemRepo(db.check_item_dao())
         val factory = ItemsVmFactory(repo)
 
-        val run_repo = RunRepo(db.run_dao())
-        val run_factory = RunVmFactory(run_repo)
+        // ✅ Run VM (여기서 ConditionDefinitionRepo도 같이 주입)
+        val run_repo = RunRepo(
+            dao = db.run_dao()
+            , condition_dao = db.run_condition_dao()
+        )
+        val condition_def_repo = ConditionDefinitionRepo(db.condision_dao())
+        val run_factory = RunVmFactory(
+            repo = run_repo,
+            condition_def_repo = condition_def_repo
+        )
 
         setContent {
             DontForgetTheme {
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 private fun seed_check_items(): List<CheckItemEntity> {
     val active = listOf(
         CheckItemEntity(
@@ -241,35 +243,10 @@ private fun seed_check_items(): List<CheckItemEntity> {
 
 private fun seed_condition_definitions(): List<ConditionDefinitionEntity> {
     return listOf(
-        ConditionDefinitionEntity(name = "성대상태", input_type = InputType.TEXT, sort_order = 1, is_active = 1),
-        ConditionDefinitionEntity(name = "호흡", input_type = InputType.TEXT, sort_order = 2, is_active = 1),
-        ConditionDefinitionEntity(name = "코막힘", input_type = InputType.TEXT, sort_order = 3, is_active = 1),
-        ConditionDefinitionEntity(name = "수면상태", input_type = InputType.TEXT, sort_order = 4, is_active = 1),
+        ConditionDefinitionEntity(name = "성대상태", input_type = InputType.LEVEL_5, sort_order = 1, is_active = 1),
+        ConditionDefinitionEntity(name = "호흡", input_type = InputType.LEVEL_5, sort_order = 2, is_active = 1),
+        ConditionDefinitionEntity(name = "코막힘", input_type = InputType.LEVEL_5, sort_order = 3, is_active = 1),
+        ConditionDefinitionEntity(name = "수면상태", input_type = InputType.LEVEL_5, sort_order = 4, is_active = 1),
         ConditionDefinitionEntity(name = "몸상태(메모)", input_type = InputType.TEXT, sort_order = 5, is_active = 1)
     )
 }
-
-//@Composable
-//fun AppRoot() {
-//    Text(
-//        text = "Vocal Checklist App",
-//        modifier = Modifier.padding(24.dp)
-//    )
-//}
-
-//
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    DontForgetTheme {
-//        Greeting("Android")
-//    }
-//}

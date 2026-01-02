@@ -20,5 +20,6 @@ enum class ConditionPhase {
 enum class InputType {
     SCORE,
     TEXT,
-    TOGGLE
+    TOGGLE,
+    LEVEL_5 // ✅ 추가: 매우나쁨~매우좋음 콤보
 }

@@ -58,6 +58,7 @@ fun RunScreen(
             RunStep.CONDITION_START -> {
                 // ✅ 지금은 컨디션 입력 UI “껍데기”부터
                 ConditionStartScreen(
+                    vm = vm,
                     sessionId = current_session_id,
                     onSave = {
                         // 다음 단계에서 DB 저장 붙일 거임
