@@ -42,6 +42,9 @@ class RunViewModel(
     private val _step = MutableStateFlow(RunStep.HOME)
     val step: StateFlow<RunStep> = _step
 
+    private val _current_started_at = MutableStateFlow<Long?>(null)
+    val current_started_at: StateFlow<Long?> = _current_started_at
+
     fun refresh_in_progress() {
         viewModelScope.launch {
             _in_progress.value = repo.get_in_progress()
@@ -54,6 +57,8 @@ class RunViewModel(
             _current_session_id.value = new_id
             _in_progress.value = null
 
+            _current_started_at.value = System.currentTimeMillis() // ✅ 추가
+
             clear_condition_start_cache()   // ✅ 새로하기면 값 비움
             _step.value = RunStep.CONDITION_START
         }
@@ -61,6 +66,8 @@ class RunViewModel(
 
     fun resume_existing(session_id: Long) {
         _current_session_id.value = session_id
+
+        _current_started_at.value = System.currentTimeMillis() // ✅ 추가(이어하기 시작 시점 기준)
 
         load_condition_start(session_id)   // ✅ 이어하기면 DB값 로드
         _step.value = RunStep.CONDITION_START
@@ -79,6 +86,7 @@ class RunViewModel(
         viewModelScope.launch {
             repo.finish_session(sid)
             _current_session_id.value = null
+            _current_started_at.value = null // ✅ 추가
             refresh_in_progress()
         }
     }

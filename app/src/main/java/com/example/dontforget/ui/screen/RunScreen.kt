@@ -26,6 +26,7 @@ fun RunScreen(
     var confirm_start_open by remember { mutableStateOf(false) }
     var resume_dialog_open by remember { mutableStateOf(false) }
 
+    val started_at by vm.current_started_at.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refresh_in_progress() }
 
     Box(
@@ -73,6 +74,7 @@ fun RunScreen(
                 RunItemsScreen(
                     items_vm = items_vm,
                     sessionId = current_session_id,
+                    startedAt = started_at,
                     onFinish = {
                         vm.finish_current()
                         vm.go_home()

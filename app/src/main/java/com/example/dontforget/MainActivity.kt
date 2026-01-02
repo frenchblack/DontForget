@@ -51,7 +51,10 @@ class MainActivity : ComponentActivity() {
         }
 
         // ✅ Items VM
-        val repo = CheckItemRepo(db.check_item_dao())
+        val repo = CheckItemRepo(
+            dao = db.check_item_dao(),
+            progress_dao = db.run_item_progress_dao()
+        )
         val factory = ItemsVmFactory(repo)
 
         // ✅ Run VM (여기서 ConditionDefinitionRepo도 같이 주입)

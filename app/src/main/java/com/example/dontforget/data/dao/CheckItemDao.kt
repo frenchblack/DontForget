@@ -68,4 +68,25 @@ interface CheckItemDao {
 
     @Insert
     suspend fun insert_all(items: List<CheckItemEntity>)
+
+    @Query("""
+    UPDATE check_item
+       SET practice_success_count = practice_success_count + 1
+     WHERE item_id = :item_id
+""")
+    suspend fun inc_practice_success(item_id: Long)
+
+    @Query("""
+    UPDATE check_item
+       SET practice_fail_count = practice_fail_count + 1
+     WHERE item_id = :item_id
+""")
+    suspend fun inc_practice_fail(item_id: Long)
+
+    @Query("""
+    UPDATE check_item
+       SET practice_revert_count = practice_revert_count + 1
+     WHERE item_id = :item_id
+""")
+    suspend fun inc_practice_revert(item_id: Long)
 }
