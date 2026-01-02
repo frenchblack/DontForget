@@ -62,4 +62,10 @@ interface CheckItemDao {
      WHERE item_id = :item_id
 """)
     suspend fun revert_to_active(item_id: Long)
+
+    @Query("SELECT COUNT(*) FROM check_item")
+    suspend fun count_all(): Int
+
+    @Insert
+    suspend fun insert_all(items: List<CheckItemEntity>)
 }

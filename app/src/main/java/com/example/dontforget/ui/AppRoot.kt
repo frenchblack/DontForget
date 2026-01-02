@@ -8,11 +8,14 @@ import androidx.compose.ui.graphics.Color
 import com.example.dontforget.ui.screen.ItemsScreen
 import com.example.dontforget.ui.screen.RunScreen
 import com.example.dontforget.ui.vm.ItemsViewModel
+import com.example.dontforget.ui.vm.RunViewModel
 
 private enum class Tab { RUN, ITEMS }
 
 @Composable
-fun AppRoot(itemsVm: ItemsViewModel) {
+fun AppRoot(    items_vm: ItemsViewModel,
+                run_vm: RunViewModel
+) {
     var tab by remember { mutableStateOf(Tab.RUN) }
 
     Scaffold(
@@ -56,8 +59,8 @@ fun AppRoot(itemsVm: ItemsViewModel) {
         }
     ) { padding ->
         when (tab) {
-            Tab.RUN -> RunScreen(modifier = Modifier.padding(padding))
-            Tab.ITEMS -> ItemsScreen(vm = itemsVm, modifier = Modifier.padding(padding))
+            Tab.RUN -> RunScreen(vm = run_vm, modifier = Modifier.padding(padding))
+            Tab.ITEMS -> ItemsScreen(vm = items_vm, modifier = Modifier.padding(padding))
         }
     }
 }
