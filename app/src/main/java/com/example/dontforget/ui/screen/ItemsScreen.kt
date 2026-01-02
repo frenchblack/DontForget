@@ -1,5 +1,7 @@
 package com.example.dontforget.ui.screen
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +23,7 @@ fun ItemsScreen(
     val active by vm.active.collectAsStateWithLifecycle()
     val mastered by vm.mastered.collectAsStateWithLifecycle()
 
+    var selectedTab by remember { mutableStateOf(0) } // 0: ACTIVE, 1: MASTERED
     var expanded_item_id by remember { mutableStateOf<Long?>(null) }
 
     var addDialogOpen by remember { mutableStateOf(false) }
@@ -29,61 +32,77 @@ fun ItemsScreen(
 
     Column(modifier.padding(16.dp)) {
         Text("Items (체크항목 관리)", style = MaterialTheme.typography.titleLarge)
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Color(0xFFF2F2F2),
+            contentColor = Color.Black
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = {
+                    selectedTab = 0
+                    expanded_item_id = null   // ✅ 여기
+                },
+                text = { Text("ACTIVE") }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = {
+                    selectedTab = 1
+                    expanded_item_id = null   // ✅ 여기
+                },
+                text = { Text("MASTERED") }
+            )
+        }
         Spacer(Modifier.height(12.dp))
 
-        BlackButton("항목 추가", Modifier.fillMaxWidth()) {
-            addDialogOpen = true
+        if (selectedTab == 0) {
+            Spacer(Modifier.height(12.dp))
+            BlackButton("항목 추가", Modifier.fillMaxWidth()) {
+                addDialogOpen = true
+            }
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("ACTIVE", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(active, key = { it.item_id }) { item ->
-                ItemCard(
-                    item = item,
-                    status = "ACTIVE",
-                    expanded = expanded_item_id == item.item_id,
-                    onToggle = {
-                        expanded_item_id =
-                            if (expanded_item_id == item.item_id) null else item.item_id
-                    },
-                    onComplete = { vm.to_mastered(item.item_id) },
-                    onRevert = { },
-                    onEdit = { editTarget = item },
-                    onDelete = { deleteTarget = item },
-                    onMistake = { vm.add_mistake(item.item_id) }
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Text("MASTERED", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(mastered, key = { it.item_id }) { item ->
-                ItemCard(
-                    item = item,
-                    status = "MASTERED",
-                    expanded = expanded_item_id == item.item_id,
-                    onToggle = {
-                        expanded_item_id =
-                            if (expanded_item_id == item.item_id) null else item.item_id
-                    },
-                    onComplete = { },
-                    onRevert = { vm.revert(item.item_id) },
-                    onEdit = { editTarget = item },
-                    onDelete = { deleteTarget = item },
-                    onMistake = { }
-                )
+            if (selectedTab == 0) {
+                items(active, key = { it.item_id }) { item ->
+                    ItemCard(
+                        item = item,
+                        status = "ACTIVE",
+                        expanded = expanded_item_id == item.item_id,
+                        onToggle = {
+                            expanded_item_id =
+                                if (expanded_item_id == item.item_id) null else item.item_id
+                        },
+                        onComplete = { vm.to_mastered(item.item_id) },
+                        onRevert = { },
+                        onEdit = { editTarget = item },
+                        onDelete = { deleteTarget = item },
+                        onMistake = { vm.add_mistake(item.item_id) }
+                    )
+                }
+            } else {
+                items(mastered, key = { it.item_id }) { item ->
+                    ItemCard(
+                        item = item,
+                        status = "MASTERED",
+                        expanded = expanded_item_id == item.item_id,
+                        onToggle = {
+                            expanded_item_id =
+                                if (expanded_item_id == item.item_id) null else item.item_id
+                        },
+                        onComplete = { },
+                        onRevert = { vm.revert(item.item_id) },
+                        onEdit = { editTarget = item },
+                        onDelete = { deleteTarget = item },
+                        onMistake = { }
+                    )
+                }
             }
         }
     }
@@ -151,7 +170,14 @@ private fun ItemCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         onClick = onToggle
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .animateContentSize(
+                    animationSpec = tween(durationMillis = 220)
+                )
+                .padding(12.dp)
+        ) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
