@@ -200,14 +200,14 @@ fun RunItemsScreen(
                 Tab(
                     selected = tab == PracticeTab.PROCESS,
                     onClick = { tab = PracticeTab.PROCESS; expanded_item_id = null },
-                    text = { Text("PROCESS (${process_list.size})", color = Color.White) },
+                    text = { Text("적용중 (${process_list.size})", color = Color.White) },
                     selectedContentColor = Color.White,
                     unselectedContentColor = Color.White.copy(alpha = 0.7f)
                 )
                 Tab(
                     selected = tab == PracticeTab.COMPLETE,
                     onClick = { tab = PracticeTab.COMPLETE; expanded_item_id = null },
-                    text = { Text("COMPLETE (${complete_list.size})", color = Color.White) },
+                    text = { Text("적용완료 (${complete_list.size})", color = Color.White) },
                     selectedContentColor = Color.White,
                     unselectedContentColor = Color.White.copy(alpha = 0.7f)
                 )

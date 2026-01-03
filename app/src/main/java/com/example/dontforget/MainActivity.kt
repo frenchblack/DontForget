@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
             AppDatabase::class.java,
             "dontforget.db"
         )
-            .fallbackToDestructiveMigration()
+//            .fallbackToDestructiveMigration()
             .build()
 
         lifecycleScope.launch {

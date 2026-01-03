@@ -43,7 +43,7 @@ fun ItemsScreen(
                     selectedTab = 0
                     expanded_item_id = null   // ✅ 여기
                 },
-                text = { Text("ACTIVE") }
+                text = { Text("연습중") }
             )
             Tab(
                 selected = selectedTab == 1,
@@ -51,7 +51,7 @@ fun ItemsScreen(
                     selectedTab = 1
                     expanded_item_id = null   // ✅ 여기
                 },
-                text = { Text("MASTERED") }
+                text = { Text("연습완료") }
             )
         }
         Spacer(Modifier.height(12.dp))

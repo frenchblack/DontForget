@@ -30,7 +30,10 @@ fun AppRoot(    items_vm: ItemsViewModel,
                     selected = tab == Tab.RUN,
                     onClick = { tab = Tab.RUN },
                     label = {
-                        Text("Run", color = Color.White)
+                        Text("연습",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = MaterialTheme.typography.labelLarge.fontSize * 1.5
+                            ), color = Color.White)
                     },
                     icon = {},
                     colors = NavigationBarItemDefaults.colors(
@@ -46,7 +49,10 @@ fun AppRoot(    items_vm: ItemsViewModel,
                     selected = tab == Tab.ITEMS,
                     onClick = { tab = Tab.ITEMS },
                     label = {
-                        Text("Items", color = Color.White)
+                        Text("리스트관리",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = MaterialTheme.typography.labelLarge.fontSize * 1.5
+                            ), color = Color.White)
                     },
                     icon = {},
                     colors = NavigationBarItemDefaults.colors(
