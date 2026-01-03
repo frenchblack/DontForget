@@ -22,4 +22,12 @@ interface ConditionDefinitionDao {
 
     @Insert
     suspend fun insert_all(items: List<ConditionDefinitionEntity>)
+
+    @Query("""
+        SELECT *
+          FROM condition_definition A
+         WHERE A.is_active = 1
+         ORDER BY A.sort_order ASC, A.condition_def_id ASC
+    """)
+    suspend fun get_all_active_ordered(): List<ConditionDefinitionEntity>
 }

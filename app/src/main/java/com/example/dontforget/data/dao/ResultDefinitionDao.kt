@@ -22,4 +22,12 @@ interface ResultDefinitionDao {
 
     @Insert
     suspend fun insert_all(items: List<ResultDefinitionEntity>)
+
+    @Query("""
+        SELECT *
+          FROM result_definition
+         WHERE is_active = 1
+         ORDER BY sort_order ASC, result_def_id ASC
+    """)
+    suspend fun get_all_active_ordered(): List<ResultDefinitionEntity>
 }

@@ -58,6 +58,9 @@ class MainActivity : ComponentActivity() {
             if (result_def_dao.count_all() == 0) {
                 result_def_dao.insert_all(seed_result_definitions())
             }
+
+            // ✅ ✅ 여기 추가 (런 더미)
+            seed_run_dummy_data_if_empty(db)
         }
 
 

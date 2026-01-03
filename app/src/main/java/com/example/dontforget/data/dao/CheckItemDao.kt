@@ -99,4 +99,11 @@ interface CheckItemDao {
      WHERE item_id = :item_id
 """)
     suspend fun dec_practice_fail(item_id: Long)
+
+    @Query("""
+        SELECT *
+          FROM check_item
+         ORDER BY item_id ASC
+    """)
+    suspend fun get_all_items(): List<CheckItemEntity>
 }
