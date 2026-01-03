@@ -94,6 +94,10 @@ class RunViewModel(
     fun finish_current_go_summary() {
         val sid = _current_session_id.value ?: return
         viewModelScope.launch {
+
+            // ✅ 여기 한 줄이 핵심: 적용완료 목록을 run_item.success로 반영
+            repo.apply_success_from_progress(sid)
+
             repo.finish_session(sid)
             _step.value = RunStep.FINISH_SUMMARY
             // sessionId는 유지 (요약 화면에서 필요)
@@ -153,6 +157,18 @@ class RunViewModel(
 
     fun go_today_summary() {
         _step.value = RunStep.TODAY_SUMMARY
+    }
+
+    fun mark_cancel(session_id: Long, item_id: Long) = viewModelScope.launch {
+        repo.mark_cancel(session_id, item_id)
+    }
+
+    fun mark_fail(session_id: Long, item_id: Long) = viewModelScope.launch {
+        repo.mark_fail(session_id, item_id)
+    }
+
+    fun clear_one(session_id: Long, item_id: Long) = viewModelScope.launch {
+        repo.clear_one(session_id, item_id)
     }
 
     enum class RunStep {

@@ -88,6 +88,7 @@ fun RunScreen(
 
             RunStep.FINISH_SUMMARY -> {
                 FinishSummaryScreen(
+                    run_vm = vm,
                     items_vm = items_vm,
                     sessionId = current_session_id,
                     onGoTodaySummary = {

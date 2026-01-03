@@ -12,9 +12,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dontforget.data.entity.CheckItemEntity
 import com.example.dontforget.ui.vm.ItemsViewModel
+import com.example.dontforget.ui.vm.RunViewModel
 
 @Composable
 fun FinishSummaryScreen(
+    run_vm: RunViewModel,
     items_vm: ItemsViewModel,
     sessionId: Long?,
     onGoTodaySummary: () -> Unit,
@@ -150,17 +152,20 @@ fun FinishSummaryScreen(
                                 "CANCEL_SUCCESS" -> {
                                     // ✅ 성공취소 +1 & COMPLETE 해제 -> 자동으로 fail_list로 내려감
                                     items_vm.practice_revert(session_id = sessionId, item_id = item.item_id)
+                                    run_vm.mark_cancel(sessionId, item.item_id)
                                 }
 
                                 "ADD_FAIL" -> {
                                     // ✅ 실패 +1, 그리고 이 세션에서는 더 못 누르게 마킹
                                     items_vm.add_practice_fail(item.item_id)
+                                    run_vm.mark_fail(sessionId, item.item_id)
                                     failed_mark_set.value = failed_mark_set.value + item.item_id
                                 }
 
                                 "CANCEL_FAIL" -> {
                                     // ✅ 실패 -1, 다시 실패 버튼 활성화
                                     items_vm.sub_practice_fail(item.item_id)
+                                    run_vm.clear_one(sessionId, item.item_id)
                                     failed_mark_set.value = failed_mark_set.value - item.item_id
                                 }
                             }

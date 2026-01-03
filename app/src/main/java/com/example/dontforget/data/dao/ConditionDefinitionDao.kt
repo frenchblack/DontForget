@@ -30,4 +30,12 @@ interface ConditionDefinitionDao {
          ORDER BY A.sort_order ASC, A.condition_def_id ASC
     """)
     suspend fun get_all_active_ordered(): List<ConditionDefinitionEntity>
+
+    @Query("""
+    SELECT *
+    FROM condition_definition
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, condition_def_id ASC
+""")
+    suspend fun get_all_active(): List<ConditionDefinitionEntity>
 }

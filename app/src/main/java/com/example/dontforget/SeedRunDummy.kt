@@ -17,7 +17,13 @@ suspend fun seed_run_dummy_data_if_empty(
     val run_summary_dao = db.run_summary_dao()
     val progress_dao = db.run_item_progress_dao()
 
-    if (run_dao.count_sessions() > 0) return
+    val sess_cnt = run_dao.count_sessions()
+    val item_cnt = run_dao.count_run_items()
+
+// ✅ run_item이 이미 있으면 더미 필요 없음
+    if (item_cnt > 0) return
+
+//    if (run_dao.count_sessions() > 0) return
 
     val all_items = check_item_dao.get_all_items()
     val condition_defs = condition_def_dao.get_all_active_ordered()

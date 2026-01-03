@@ -1,6 +1,7 @@
 package com.example.dontforget
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
@@ -14,10 +15,13 @@ import com.example.dontforget.data.entity.InputType
 import com.example.dontforget.data.entity.ResultDefinitionEntity
 import com.example.dontforget.data.repo.CheckItemRepo
 import com.example.dontforget.data.repo.ConditionDefinitionRepo
+import com.example.dontforget.data.repo.HistoryRepo
 import com.example.dontforget.data.repo.ResultRepo
 import com.example.dontforget.data.repo.RunRepo
 import com.example.dontforget.ui.AppRoot
 import com.example.dontforget.ui.theme.DontForgetTheme
+import com.example.dontforget.ui.vm.HistoryViewModel
+import com.example.dontforget.ui.vm.HistoryVmFactory
 import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.ItemsVmFactory
 import com.example.dontforget.ui.vm.RunViewModel
@@ -58,9 +62,19 @@ class MainActivity : ComponentActivity() {
             if (result_def_dao.count_all() == 0) {
                 result_def_dao.insert_all(seed_result_definitions())
             }
-
+            Log.d("DF_SEED", "before seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
             // ✅ ✅ 여기 추가 (런 더미)
             seed_run_dummy_data_if_empty(db)
+
+            Log.d("DF_SEED", "after seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
+
+
+            val run_item_count = db.run_dao().count_run_items()
+            android.util.Log.d("DF", "run_item count = $run_item_count")
+
+            val recent = db.run_dao().get_recent_run_items()
+            android.util.Log.d("DF", "recent run_item size = ${recent.size}")
+            recent.forEach { android.util.Log.d("DF", "run_item: $it") }
         }
 
 
@@ -73,8 +87,10 @@ class MainActivity : ComponentActivity() {
 
         // ✅ Run VM (여기서 ConditionDefinitionRepo도 같이 주입)
         val run_repo = RunRepo(
-            dao = db.run_dao()
-            , condition_dao = db.run_condition_dao()
+            dao = db.run_dao(),
+            condition_dao = db.run_condition_dao(),
+            check_item_dao = db.check_item_dao(),
+            progress_dao = db.run_item_progress_dao()
         )
         val condition_def_repo = ConditionDefinitionRepo(db.condision_dao())
         val run_factory = RunVmFactory(
@@ -93,16 +109,28 @@ class MainActivity : ComponentActivity() {
             result_repo = result_repo
         )
 
+        // ✅ History VM
+        val history_repo = HistoryRepo(
+            run_dao = db.run_dao(),
+            run_condition_dao = db.run_condition_dao(),
+            run_summary_dao = db.run_summary_dao(),
+            condition_def_dao = db.condision_dao(),
+            result_def_dao = db.result_definition_dao()
+        )
+        val history_factory = HistoryVmFactory(history_repo)
+
         setContent {
             DontForgetTheme {
                 val items_vm: ItemsViewModel = viewModel(factory = factory)
                 val run_vm: RunViewModel = viewModel(factory = run_factory)
                 val today_vm: TodaySummaryViewModel = viewModel(factory = today_factory)
+                val history_vm: HistoryViewModel = viewModel(factory = history_factory)
 
                 AppRoot(
                     items_vm = items_vm,
                     run_vm = run_vm,
-                    today_vm = today_vm
+                    today_vm = today_vm,
+                    history_vm = history_vm
                 )
             }
         }

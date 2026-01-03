@@ -106,4 +106,19 @@ interface CheckItemDao {
          ORDER BY item_id ASC
     """)
     suspend fun get_all_items(): List<CheckItemEntity>
+
+    @Query("""
+    SELECT *
+      FROM check_item
+     ORDER BY item_id ASC
+""")
+    suspend fun get_all(): List<CheckItemEntity>
+
+    @Query("""
+    SELECT *
+      FROM check_item
+     WHERE status = 'ACTIVE'
+     ORDER BY item_id DESC
+""")
+    suspend fun get_active_list(): List<CheckItemEntity>
 }
