@@ -1,11 +1,15 @@
 package com.example.dontforget.data.repo
 
 import com.example.dontforget.data.dao.ConditionDefinitionDao
+import com.example.dontforget.data.dao.ConditionStatRow
+import com.example.dontforget.data.dao.ItemDateAggRow
+import com.example.dontforget.data.dao.ItemOptionRow
 import com.example.dontforget.data.dao.ResultDefinitionDao
 import com.example.dontforget.data.dao.RunConditionDao
 import com.example.dontforget.data.dao.RunDao
 import com.example.dontforget.data.dao.RunDateAggRow
 import com.example.dontforget.data.dao.RunSummaryDao
+import com.example.dontforget.data.dao.SummaryStatRow
 import com.example.dontforget.data.entity.ConditionDefinitionEntity
 import com.example.dontforget.data.entity.ConditionPhase
 import com.example.dontforget.data.entity.ResultDefinitionEntity
@@ -62,5 +66,24 @@ class HistoryRepo(
             end_conditions = end,
             summaries = summaries
         )
+    }
+
+    suspend fun get_item_options(): List<ItemOptionRow> = run_dao.get_item_options()
+
+    suspend fun get_item_date_aggs(from_ms: Long, to_ms: Long, item_id: Long): List<ItemDateAggRow> {
+        return run_dao.get_item_date_aggs(from_ms, to_ms, item_id)
+    }
+
+    suspend fun get_condition_stats(
+        from_ms: Long,
+        to_ms: Long,
+        condition_def_id: Long,
+        phase: ConditionPhase
+    ): List<ConditionStatRow> {
+        return run_condition_dao.get_condition_stats(from_ms, to_ms, condition_def_id, phase)
+    }
+
+    suspend fun get_summary_stats(from_ms: Long, to_ms: Long, result_def_id: Long): List<SummaryStatRow> {
+        return run_summary_dao.get_summary_stats(from_ms, to_ms, result_def_id)
     }
 }

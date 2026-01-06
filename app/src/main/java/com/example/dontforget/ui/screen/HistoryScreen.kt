@@ -13,10 +13,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.dontforget.data.repo.HistorySessionBundle
 import com.example.dontforget.data.entity.RunSessionEntity
 import com.example.dontforget.ui.vm.HistoryViewModel
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlin.math.abs
+
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.BoxWithConstraints
+import kotlin.math.max
+import kotlin.math.min
+
+
 
 private enum class HistoryViewType {
     DATE_DETAIL,
@@ -26,6 +45,8 @@ private enum class HistoryViewType {
     STATS_SUMMARY,
     ANALYSIS
 }
+
+private val STAT_SECTION_MIN_HEIGHT = 180.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +70,8 @@ fun HistoryScreen(
     var stats_pick by remember { mutableStateOf(StatsPickType.TIME) }
 
     val HistoryBg = Color(0xFFEAF2FF) // 연한 파스텔 블루
+
+
 
     Scaffold(
         modifier = modifier,
@@ -469,6 +492,18 @@ private fun code_to_kor(code: String?): String {
     }
 }
 
+private fun code_to_level(code: String?): Int {
+    return when (code) {
+        "VERY_BAD" -> 1
+        "BAD" -> 2
+        "NORMAL" -> 3
+        "GOOD" -> 4
+        "VERY_GOOD" -> 5
+        else -> 0
+    }
+}
+
+
 private fun ms_to_min(ms: Long): Long = (ms / 1000L / 60L)
 
 // ===========================
@@ -642,28 +677,49 @@ private fun StatBaseLayout(
     chart: @Composable () -> Unit,
     detail: @Composable () -> Unit
 ) {
+    val CHART_H = 180.dp
+    val DETAIL_H = 360.dp   // ✅ 표 더 길게 (원하는 만큼 320~500)
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())  // ✅ 이게 핵심
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(title, style = MaterialTheme.typography.titleLarge, color = Color.Black)
 
             header()
 
-            Divider()
+            Divider(thickness = 1.5.dp)
 
-            chart()
+            Text("그래프", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FC)),
+                modifier = Modifier.fillMaxWidth().height(CHART_H)
+            ) {
+                Box(Modifier.fillMaxSize().padding(12.dp)) { chart() }
+            }
 
-            Divider()
+            Divider(thickness = 1.5.dp)
 
-            detail()
+            Text("상세", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FC)),
+                modifier = Modifier.fillMaxWidth().height(DETAIL_H)
+            ) {
+                Box(Modifier.fillMaxSize().padding(12.dp)) { detail() }
+            }
         }
     }
 }
+
+
+
 
 @Composable
 private fun RangeSelector(
@@ -717,6 +773,11 @@ private fun StatsTimeScreen(vm: HistoryViewModel) {
     // ✅ 상단 총합(기간별)
     val total_ms = remember(date_rows) { date_rows.sumOf { it.total_ms } }
     val total_sessions = remember(date_rows) { date_rows.sumOf { it.session_count } }
+    val points = remember(date_rows) {
+        date_rows
+            .sortedBy { it.date } // 오래된 -> 최신 (원하면 reversed로 바꿔)
+            .map { DateMsPoint(date = it.date, total_ms = it.total_ms) }
+    }
 
     StatBaseLayout(
         title = "연습시간 통계",
@@ -732,8 +793,17 @@ private fun StatsTimeScreen(vm: HistoryViewModel) {
             }
         },
         chart = {
-            // 1차는 플레이스홀더. (나중에 date_rows로 간단 바 차트 만들면 됨)
-            ChartPlaceholder("그래프 자리 (날짜별 총 연습시간)")
+            // points: List<DateMsPoint>
+            InteractiveLineChartV2(
+                count = points.size,
+                labelAt = { i -> points[i].date },
+                valueAt = { i -> points[i].total_ms.toFloat() },
+                valueTextAt = { i ->
+                    val min = ms_to_min(points[i].total_ms)
+                    "연습시간: ${min}분"
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         },
         detail = {
             if (date_rows.isEmpty()) {
@@ -741,21 +811,19 @@ private fun StatsTimeScreen(vm: HistoryViewModel) {
                 return@StatBaseLayout
             }
 
-            // ✅ 날짜별 상세 리스트 (네가 원한 “근거 데이터” 영역)
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(date_rows) { r ->
+                date_rows.forEach { r ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(r.date, color = Color.Black)
-                        Text(
-                            "세션 ${r.session_count} · ${ms_to_min(r.total_ms)}분",
-                            color = Color.Black
-                        )
+                        Text("세션 ${r.session_count} · ${ms_to_min(r.total_ms)}분", color = Color.Black)
                     }
                     Divider()
                 }
@@ -768,28 +836,170 @@ private fun StatsTimeScreen(vm: HistoryViewModel) {
 // ✅ STATS_ITEM: 기존 ItemStatsDemo(더미)를 "같은 틀" 안에 넣어 UX 통일
 // (나중에 실데이터 붙여도 레이아웃은 그대로)
 // ------------------------------------------------------
+
+//private enum class ItemChartMetric(val label: String) { SUCCESS("성공"), FAIL("실패"), CANCEL("취소"), TOTAL("합계") }
+private enum class ItemChartMetric(val label: String) {
+    SUCCESS("성공"),
+    FAIL("실패"),
+    CANCEL("취소"),
+    TOTAL("합계")
+}
+
 @Composable
 private fun StatsItemScreen(vm: HistoryViewModel) {
     var range by remember { mutableStateOf(StatRange.D30) }
 
+    val options by vm.item_options.collectAsState()
+    val rows by vm.item_stat_rows.collectAsState()
+
+    var picked_item_id by remember { mutableStateOf<Long?>(null) }
+
+    // ✅ metric은 header 밖으로 빼야 chart에서도 쓸 수 있음
+    var metric by remember { mutableStateOf(ItemChartMetric.SUCCESS) }
+
+    LaunchedEffect(Unit) {
+        vm.load_item_options()
+    }
+
+    LaunchedEffect(range, picked_item_id) {
+        val id = picked_item_id ?: return@LaunchedEffect
+        val days = range.days ?: 3650
+        vm.load_item_stats(item_id = id, days = days)
+    }
+
+    // ✅ 그래프용 points (metric에 따라 v가 바뀜)
+    val points = remember(rows, metric) {
+        rows
+            .sortedBy { it.date }
+            .map { r ->
+                val v = when (metric) {
+                    ItemChartMetric.SUCCESS -> r.success
+                    ItemChartMetric.FAIL -> r.fail_count
+                    ItemChartMetric.CANCEL -> r.cancel
+                    ItemChartMetric.TOTAL -> (r.success + r.fail_count + r.cancel)
+                }
+                DateIntPoint(date = r.date, v = v)
+            }
+    }
+
     StatBaseLayout(
         title = "아이템 통계",
         header = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RangeSelector(current = range, on_select = { range = it })
-                Text("아이템 선택 + 날짜별 성공/실패/취소 표", color = Color.Black)
+                ItemDropdown(
+                    options = options,
+                    picked_id = picked_item_id,
+                    on_pick = { picked_item_id = it }
+                )
+
+                // ✅ 지표 선택
+                SingleChoiceSegmentedButtonRow {
+                    ItemChartMetric.entries.forEachIndexed { idx, m ->
+                        SegmentedButton(
+                            selected = (metric == m),
+                            onClick = { metric = m },
+                            shape = SegmentedButtonDefaults.itemShape(idx, ItemChartMetric.entries.size)
+                        ) { Text(m.label) }
+                    }
+                }
             }
         },
         chart = {
-            // 아이템은 굳이 그래프 없이 표 중심으로 갈 수도 있음.
-            // 일단 자리는 고정.
-            ChartPlaceholder("아이템별 그래프(선택사항) / 현재는 표 중심")
+            if (picked_item_id == null) {
+                ChartPlaceholder("아이템을 선택하세요")
+            } else if (points.isEmpty()) {
+                ChartPlaceholder("표시할 데이터가 없음")
+            } else {
+                InteractiveLineChartV2(
+                    count = points.size,
+                    labelAt = { i -> points[i].date },
+                    valueAt = { i -> points[i].v.toFloat() },
+                    valueTextAt = { i ->
+                        "${metric.label}: ${points[i].v}"
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         },
         detail = {
-            // ✅ 너가 이미 만든 정렬 가능한 표(더미) 그대로 사용
-            ItemStatsDemo()
+            if (picked_item_id == null) {
+                Text("아이템을 선택하세요", color = Color.Black)
+                return@StatBaseLayout
+            }
+            if (rows.isEmpty()) {
+                Text("표시할 데이터가 없음", color = Color.Black)
+                return@StatBaseLayout
+            }
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("날짜", modifier = Modifier.weight(1.6f), color = Color.Black, maxLines = 1, softWrap = false)
+                        Text("성공", modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                        Text("실패", modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                        Text("취소", modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                    }
+                    Divider()
+                }
+
+                items(rows) { r ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(r.date, modifier = Modifier.weight(1.6f), color = Color.Black, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        Text(r.success.toString(), modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                        Text(r.fail_count.toString(), modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                        Text(r.cancel.toString(), modifier = Modifier.weight(1f), color = Color.Black, maxLines = 1, softWrap = false)
+                    }
+                    Divider()
+                }
+            }
         }
     )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ItemDropdown(
+    options: List<com.example.dontforget.data.dao.ItemOptionRow>,
+    picked_id: Long?,
+    on_pick: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val picked_name = remember(options, picked_id) {
+        options.firstOrNull { it.item_id == picked_id }?.title ?: "아이템 선택"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = picked_name,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            label = { Text("아이템") }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { o ->
+                DropdownMenuItem(
+                    text = { Text(o.title) },
+                    onClick = {
+                        on_pick(o.item_id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------
@@ -799,22 +1009,169 @@ private fun StatsItemScreen(vm: HistoryViewModel) {
 private fun StatsConditionScreen(vm: HistoryViewModel) {
     var range by remember { mutableStateOf(StatRange.D30) }
 
+    val defs by vm.condition_defs.collectAsState()
+    val rows by vm.condition_stat_rows.collectAsState()
+
+    // ✅ 기본 phase START
+    var phase by remember { mutableStateOf(com.example.dontforget.data.entity.ConditionPhase.START) }
+    var picked_id by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(Unit) {
+        // 정의 리스트는 load_recent_dates에서 채워지지만, 혹시 통계만 먼저 들어올 수 있으니 한번 호출
+        vm.load_recent_dates(days = range.days ?: 3650)
+    }
+
+    LaunchedEffect(range, picked_id, phase) {
+        val days = range.days ?: 3650
+        val id = picked_id
+        if (id != null) vm.load_condition_stats(condition_def_id = id, days = days, phase = phase)
+    }
+    val points = remember(rows) {
+        rows
+            .sortedBy { it.date }
+            .map { DateIntPoint(date = it.date, v = code_to_level(it.value_code)) }
+    }
     StatBaseLayout(
         title = "컨디션 통계",
         header = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RangeSelector(current = range, on_select = { range = it })
-                Text("컨디션 항목 선택 → 날짜별 상태 그래프 + 메모 표", color = Color.Black)
+
+                // phase 선택 (START/MID/END)
+                SingleChoiceSegmentedButtonRow {
+                    val all = listOf(
+                        com.example.dontforget.data.entity.ConditionPhase.START,
+                        com.example.dontforget.data.entity.ConditionPhase.MID,
+                        com.example.dontforget.data.entity.ConditionPhase.END
+                    )
+                    all.forEachIndexed { idx, p ->
+                        SegmentedButton(
+                            selected = (phase == p),
+                            onClick = { phase = p },
+                            shape = SegmentedButtonDefaults.itemShape(idx, all.size)
+                        ) {
+                            Text(p.name)
+                        }
+                    }
+                }
+
+                // 항목 선택
+                ConditionDefDropdown(
+                    defs = defs,
+                    picked_id = picked_id,
+                    on_pick = { picked_id = it }
+                )
             }
         },
         chart = {
-            ChartPlaceholder("컨디션 상태 그래프 자리")
+            // rows: vm.condition_stat_rows (date, value_code, memo)
+            val points = remember(rows) {
+                rows
+                    .sortedBy { it.date }
+                    .mapNotNull { r ->
+                        val score = code_to_score(r.value_code) ?: return@mapNotNull null
+                        Triple(r.date, score, r.value_code)
+                    }
+            }
+
+            if (picked_id == null) {
+                ChartPlaceholder("컨디션 항목을 선택하세요")
+            } else if (points.isEmpty()) {
+                ChartPlaceholder("표시할 데이터가 없음")
+            } else {
+                InteractiveLineChartV2(
+                    count = points.size,
+                    labelAt = { i -> points[i].first },
+                    valueAt = { i -> points[i].second.toFloat() },
+                    valueTextAt = { i ->
+                        val score = points[i].second
+                        "컨디션: ${score_to_kor(score)} (${score})"
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         },
         detail = {
-            Text("메모 표 자리 (날짜 / 상태 / 메모)", color = Color.Black)
+            if (picked_id == null) {
+                Text("컨디션 항목을 선택하세요", color = Color.Black)
+                return@StatBaseLayout
+            }
+
+            if (rows.isEmpty()) {
+                Text("표시할 데이터가 없음", color = Color.Black)
+                return@StatBaseLayout
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(rows) { r ->
+                    Column(Modifier.fillMaxWidth()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(r.date, color = Color.Black)
+                            LevelBadge(r.value_code)
+                        }
+                        if (r.memo.isNotBlank()) {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F4F8))) {
+                                Text(
+                                    r.memo,
+                                    modifier = Modifier.padding(10.dp),
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        Divider()
+                    }
+                }
+            }
         }
     )
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConditionDefDropdown(
+    defs: List<com.example.dontforget.data.entity.ConditionDefinitionEntity>,
+    picked_id: Long?,
+    on_pick: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val picked_name = remember(defs, picked_id) {
+        defs.firstOrNull { it.condition_def_id == picked_id }?.name ?: "컨디션 항목 선택"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = picked_name,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            label = { Text("컨디션 항목") }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            defs.forEach { d ->
+                DropdownMenuItem(
+                    text = { Text(d.name) },
+                    onClick = {
+                        on_pick(d.condition_def_id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 // ------------------------------------------------------
 // ✅ STATS_SUMMARY: 틀만 고정 (요약항목 selector + 그래프 + 메모표 붙이면 됨)
@@ -823,21 +1180,133 @@ private fun StatsConditionScreen(vm: HistoryViewModel) {
 private fun StatsSummaryScreen(vm: HistoryViewModel) {
     var range by remember { mutableStateOf(StatRange.D30) }
 
+    val defs by vm.result_defs.collectAsState()
+    val rows by vm.summary_stat_rows.collectAsState()
+
+    var picked_id by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(Unit) {
+        vm.load_recent_dates(days = range.days ?: 3650)
+    }
+
+    LaunchedEffect(range, picked_id) {
+        val days = range.days ?: 3650
+        val id = picked_id
+        if (id != null) vm.load_summary_stats(result_def_id = id, days = days)
+    }
+
     StatBaseLayout(
         title = "요약 통계",
         header = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RangeSelector(current = range, on_select = { range = it })
-                Text("요약 항목 선택 → 날짜별 상태 그래프 + 메모 표", color = Color.Black)
+                ResultDefDropdown(defs = defs, picked_id = picked_id, on_pick = { picked_id = it })
             }
         },
-        chart = {
-            ChartPlaceholder("요약 상태 그래프 자리")
-        },
+        chart = { val points = remember(rows) {
+            rows
+                .sortedBy { it.date }
+                .mapNotNull { r ->
+                    val score = code_to_score(r.value_code) ?: return@mapNotNull null
+                    Triple(r.date, score, r.value_code)
+                }
+        }
+
+            if (picked_id == null) {
+                ChartPlaceholder("요약 항목을 선택하세요")
+            } else if (points.isEmpty()) {
+                ChartPlaceholder("표시할 데이터가 없음")
+            } else {
+                InteractiveLineChartV2(
+                    count = points.size,
+                    labelAt = { i -> points[i].first },
+                    valueAt = { i -> points[i].second.toFloat() },
+                    valueTextAt = { i ->
+                        val score = points[i].second
+                        "요약: ${score_to_kor(score)} (${score})"
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } },
         detail = {
-            Text("메모 표 자리 (날짜 / 상태 / 메모)", color = Color.Black)
+            if (picked_id == null) {
+                Text("요약 항목을 선택하세요", color = Color.Black)
+                return@StatBaseLayout
+            }
+
+            if (rows.isEmpty()) {
+                Text("표시할 데이터가 없음", color = Color.Black)
+                return@StatBaseLayout
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(rows) { r ->
+                    Column(Modifier.fillMaxWidth()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(r.date, color = Color.Black)
+                            LevelBadge(r.value_code)
+                        }
+                        if (r.memo.isNotBlank()) {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F4F8))) {
+                                Text(
+                                    r.memo,
+                                    modifier = Modifier.padding(10.dp),
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        Divider()
+                    }
+                }
+            }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ResultDefDropdown(
+    defs: List<com.example.dontforget.data.entity.ResultDefinitionEntity>,
+    picked_id: Long?,
+    on_pick: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val picked_name = remember(defs, picked_id) {
+        defs.firstOrNull { it.result_def_id == picked_id }?.name ?: "요약 항목 선택"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = picked_name,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            label = { Text("요약 항목") }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            defs.forEach { d ->
+                DropdownMenuItem(
+                    text = { Text(d.name) },
+                    onClick = {
+                        on_pick(d.result_def_id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -954,7 +1423,7 @@ private fun StatsPickPanel(
                     when (t) {
                         StatsPickType.CONDITION -> "컨디션"
                         StatsPickType.ITEM -> "아이템"
-                        StatsPickType.TIME -> "연습시간"
+                        StatsPickType.TIME -> "연습량"
                         StatsPickType.SUMMARY -> "요약"
                     }
                 )
@@ -965,12 +1434,13 @@ private fun StatsPickPanel(
     Spacer(Modifier.height(10.dp))
 
     // 프리뷰
-    when (stats_pick) {
-        StatsPickType.CONDITION -> StatsConditionScreen(vm = vm)
-        StatsPickType.ITEM -> StatsItemScreen(vm = vm)
-        StatsPickType.TIME -> StatsTimeScreen(vm = vm)
-        StatsPickType.SUMMARY -> StatsSummaryScreen(vm = vm)
-    }
+    Text("선택 후 '적용'을 누르면 메인 화면에 표시됩니다", color = Color.Black)
+//    when (stats_pick) {
+//        StatsPickType.CONDITION -> StatsConditionScreen(vm = vm)
+//        StatsPickType.ITEM -> StatsItemScreen(vm = vm)
+//        StatsPickType.TIME -> StatsTimeScreen(vm = vm)
+//        StatsPickType.SUMMARY -> StatsSummaryScreen(vm = vm)
+//    }
 }
 
 @Composable
@@ -1222,6 +1692,398 @@ private fun SummaryEntryRow(entry: LevelEntry) {
     }
 }
 
+@Composable
+private fun SimpleLineChartByDate(
+    rows: List<DateMsPoint>,
+    modifier: Modifier = Modifier
+) {
+    if (rows.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("데이터 없음", color = Color.Gray)
+        }
+        return
+    }
+
+    val data = remember(rows) { rows } // 이미 정렬했으면 그대로
+    val maxMs = remember(data) { data.maxOf { it.total_ms }.coerceAtLeast(1L) }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        val padL = 32f
+        val padR = 12f
+        val padT = 12f
+        val padB = 24f
+
+        val chartW = (w - padL - padR).coerceAtLeast(1f)
+        val chartH = (h - padT - padB).coerceAtLeast(1f)
+
+        fun xAt(i: Int): Float {
+            if (data.size == 1) return padL
+            return padL + (chartW * i / (data.size - 1).toFloat())
+        }
+
+        fun yAt(ms: Long): Float {
+            val v = ms.toFloat() / maxMs.toFloat()
+            return padT + chartH * (1f - v)
+        }
+
+        // 라인
+        val path = androidx.compose.ui.graphics.Path()
+        data.forEachIndexed { i, r ->
+            val x = xAt(i)
+            val y = yAt(r.total_ms)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(
+            path = path,
+            color = Color(0xFF2E6BE6),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+        )
+
+        // 점
+        data.forEachIndexed { i, r ->
+            drawCircle(
+                color = Color(0xFF2E6BE6),
+                radius = 6f,
+                center = androidx.compose.ui.geometry.Offset(xAt(i), yAt(r.total_ms))
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimpleLineChartByDateInt(
+    rows: List<DateIntPoint>,
+    modifier: Modifier = Modifier
+) {
+    if (rows.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("데이터 없음", color = Color.Gray)
+        }
+        return
+    }
+
+    val data = remember(rows) { rows }
+    val maxV = remember(data) { data.maxOf { it.v }.coerceAtLeast(1) }
+
+    var picked_idx by remember { mutableStateOf<Int?>(null) }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(data) {
+                detectTapGestures { tap ->
+                    val padL = 32f
+                    val padR = 12f
+
+                    val w = size.width
+                    val chartW = (w - padL - padR).coerceAtLeast(1f)
+
+                    fun xAt(i: Int): Float {
+                        if (data.size == 1) return padL
+                        return padL + (chartW * i / (data.size - 1).toFloat())
+                    }
+
+                    // ✅ 탭한 X에 가장 가까운 포인트 index 찾기
+                    var best = 0
+                    var bestDist = Float.MAX_VALUE
+                    for (i in data.indices) {
+                        val d = abs(tap.x - xAt(i))
+                        if (d < bestDist) {
+                            bestDist = d
+                            best = i
+                        }
+                    }
+                    picked_idx = best
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            val padL = 32f
+            val padR = 12f
+            val padT = 12f
+            val padB = 24f
+
+            val chartW = (w - padL - padR).coerceAtLeast(1f)
+            val chartH = (h - padT - padB).coerceAtLeast(1f)
+
+            fun xAt(i: Int): Float {
+                if (data.size == 1) return padL
+                return padL + (chartW * i / (data.size - 1).toFloat())
+            }
+
+            fun yAt(v: Int): Float {
+                val p = v.toFloat() / maxV.toFloat()
+                return padT + chartH * (1f - p)
+            }
+
+            // 라인
+            val path = Path()
+            data.forEachIndexed { i, r ->
+                val x = xAt(i)
+                val y = yAt(r.v)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+
+            drawPath(
+                path = path,
+                color = Color(0xFF2E6BE6),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+            )
+
+            // 점
+            data.forEachIndexed { i, r ->
+                drawCircle(
+                    color = Color(0xFF2E6BE6),
+                    radius = 6f,
+                    center = Offset(xAt(i), yAt(r.v))
+                )
+            }
+
+            // ✅ 선택된 점 강조 + 세로 가이드
+            val idx = picked_idx
+            if (idx != null && idx in data.indices) {
+                val x = xAt(idx)
+                val y = yAt(data[idx].v)
+
+                // 세로 가이드
+                drawLine(
+                    color = Color(0x552E6BE6),
+                    start = Offset(x, padT),
+                    end = Offset(x, padT + chartH),
+                    strokeWidth = 3f
+                )
+
+                // 선택 점 크게
+                drawCircle(
+                    color = Color(0xFF2E6BE6),
+                    radius = 10f,
+                    center = Offset(x, y)
+                )
+            }
+        }
+
+        // ✅ 말풍선(오버레이) 텍스트
+        val idx = picked_idx
+        if (idx != null && idx in data.indices) {
+            val p = data[idx]
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+            ) {
+                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                    Text(p.date, color = Color.Black, style = MaterialTheme.typography.labelLarge)
+                    Text("값: ${p.v}", color = Color.Black, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
+
+private fun clampF(v: Float, lo: Float, hi: Float): Float = max(lo, min(hi, v))
+
+@Composable
+private fun InteractiveLineChartV2(
+    count: Int,
+    labelAt: (Int) -> String,      // 날짜 등
+    valueAt: (Int) -> Float,       // y 값
+    valueTextAt: (Int) -> String,  // 말풍선에 표시할 수치 문자열
+    modifier: Modifier = Modifier
+) {
+    if (count <= 0) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("데이터 없음", color = Color.Gray)
+        }
+        return
+    }
+
+    val maxV = remember(count) {
+        (0 until count).maxOf { valueAt(it) }.coerceAtLeast(1f)
+    }
+
+    var pickedIdx by remember { mutableStateOf<Int?>(null) }
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val boxW = with(density) { maxWidth.toPx() }
+        val boxH = with(density) { maxHeight.toPx() }
+
+        val padL = 32f
+        val padR = 12f
+        val padT = 12f
+        val padB = 24f
+
+        val chartW = (boxW - padL - padR).coerceAtLeast(1f)
+        val chartH = (boxH - padT - padB).coerceAtLeast(1f)
+
+        fun xAt(i: Int): Float {
+            if (count == 1) return padL
+            return padL + (chartW * i / (count - 1).toFloat())
+        }
+
+        fun yAt(v: Float): Float {
+            val p = v / maxV
+            return padT + chartH * (1f - p)
+        }
+
+        fun nearestIndexByX(x: Float): Int {
+            var best = 0
+            var bestDist = Float.MAX_VALUE
+            for (i in 0 until count) {
+                val d = abs(x - xAt(i))
+                if (d < bestDist) {
+                    bestDist = d
+                    best = i
+                }
+            }
+            return best
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // ✅ 탭 토글
+                .pointerInput(count) {
+                    detectTapGestures { tap ->
+                        val best = nearestIndexByX(tap.x)
+                        pickedIdx = if (pickedIdx == best) null else best
+                    }
+                }
+                // ✅ 드래그 이동
+                .pointerInput(count) {
+                    detectDragGestures(
+                        onDragStart = { start ->
+                            pickedIdx = nearestIndexByX(start.x)
+                        },
+                        onDrag = { change, _ ->
+                            pickedIdx = nearestIndexByX(change.position.x)
+                        }
+                    )
+                }
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // 라인
+                val path = androidx.compose.ui.graphics.Path()
+                for (i in 0 until count) {
+                    val x = xAt(i)
+                    val y = yAt(valueAt(i))
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+
+                drawPath(
+                    path = path,
+                    color = Color(0xFF2E6BE6),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+                )
+
+                // 점
+                for (i in 0 until count) {
+                    drawCircle(
+                        color = Color(0xFF2E6BE6),
+                        radius = 6f,
+                        center = androidx.compose.ui.geometry.Offset(xAt(i), yAt(valueAt(i)))
+                    )
+                }
+
+                // 선택 강조 + 세로 가이드 + 큰 점
+                val idx = pickedIdx
+                if (idx != null && idx in 0 until count) {
+                    val x = xAt(idx)
+                    val y = yAt(valueAt(idx))
+
+                    drawLine(
+                        color = Color(0x552E6BE6),
+                        start = androidx.compose.ui.geometry.Offset(x, padT),
+                        end = androidx.compose.ui.geometry.Offset(x, padT + chartH),
+                        strokeWidth = 3f
+                    )
+
+                    drawCircle(
+                        color = Color(0xFF2E6BE6),
+                        radius = 10f,
+                        center = androidx.compose.ui.geometry.Offset(x, y)
+                    )
+                }
+            }
+
+            // ✅ 말풍선(점 근처 + clamp)
+            val idx = pickedIdx
+            if (idx != null && idx in 0 until count) {
+                val x = xAt(idx)
+                val y = yAt(valueAt(idx))
+
+                val tooltipW = with(density) { 170.dp.toPx() }
+                val tooltipH = with(density) { 60.dp.toPx() }
+                val margin = with(density) { 8.dp.toPx() }
+
+                // 기본 위치: 점 위쪽(위로 뜨게)
+                var left = x - tooltipW / 2f
+                var top = y - tooltipH - 10f
+
+                // 위로 못 뜨면 아래로
+                if (top < margin) top = y + 12f
+
+                // clamp
+                left = clampF(left, margin, boxW - tooltipW - margin)
+                top = clampF(top, margin, boxH - tooltipH - margin)
+
+                val leftDp = with(density) { left.toDp() }
+                val topDp = with(density) { top.toDp() }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier
+                        .offset(x = leftDp, y = topDp)
+                ) {
+                    Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                        Text(labelAt(idx), color = Color.Black, style = MaterialTheme.typography.labelLarge)
+                        Text(valueTextAt(idx), color = Color.Black, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+private data class DateMsPoint(
+    val date: String,
+    val total_ms: Long
+)
+
+private data class DateIntPoint(
+    val date: String,
+    val v: Int
+)
+
+private fun code_to_score(code: String?): Int? = when (code) {
+    "VERY_BAD" -> 1
+    "BAD" -> 2
+    "NORMAL" -> 3
+    "GOOD" -> 4
+    "VERY_GOOD" -> 5
+    null, "" -> null
+    else -> null
+}
+
+private fun score_to_kor(score: Int): String = when (score) {
+    1 -> "매우나쁨"
+    2 -> "나쁨"
+    3 -> "보통"
+    4 -> "좋음"
+    5 -> "매우좋음"
+    else -> "-"
+}
 
 private enum class PickTab { DATE, STATS, ANALYSIS }
 private enum class DatePickStep { DATE_LIST, SESSION_LIST }

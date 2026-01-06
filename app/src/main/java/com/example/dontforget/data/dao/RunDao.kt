@@ -16,6 +16,21 @@ data class RunDateAggRow(
     val total_ms: Long
 )
 
+// ✅ 아이템 선택용 row
+data class ItemOptionRow(
+    val item_id: Long,
+    val title: String
+)
+
+// ✅ 아이템 통계용 날짜 집계 row
+data class ItemDateAggRow(
+    val date: String,
+    val success: Int,
+    val fail_count: Int,
+    val cancel: Int
+)
+
+
 @Dao
 interface RunDao {
 
@@ -210,4 +225,39 @@ interface RunDao {
        AND item_id = :item_id
 """)
     suspend fun clear_one(session_id: Long, item_id: Long)
+
+    @Query("""
+        SELECT
+            item_id AS item_id
+          , MAX(title) AS title
+        FROM run_item
+        GROUP BY item_id
+        ORDER BY MAX(created_at) DESC
+    """)
+    suspend fun get_item_options(): List<ItemOptionRow>
+
+    // =========================
+    // ✅ 통계: 아이템 날짜별 성공/실패/취소 합계
+    // =========================
+    @Query("""
+    SELECT
+        date(S.start_time / 1000, 'unixepoch', 'localtime') AS date
+      , SUM(I.success_count) AS success
+      , SUM(I.fail_count) AS fail_count
+      , SUM(I.cancel_count) AS cancel
+    FROM run_item I
+    JOIN run_session S
+      ON S.session_id = I.session_id
+    WHERE S.start_time >= :from_ms
+      AND S.start_time < :to_ms
+      AND S.status = 'COMPLETED'
+      AND I.item_id = :item_id
+    GROUP BY date
+    ORDER BY date DESC
+""")
+    suspend fun get_item_date_aggs(
+        from_ms: Long,
+        to_ms: Long,
+        item_id: Long
+    ): List<ItemDateAggRow>
 }

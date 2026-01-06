@@ -3,7 +3,14 @@ package com.example.dontforget.ui.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.dontforget.data.dao.ConditionStatRow
+import com.example.dontforget.data.dao.ItemDateAggRow
+import com.example.dontforget.data.dao.ItemOptionRow
 import com.example.dontforget.data.dao.RunDateAggRow
+import com.example.dontforget.data.dao.SummaryStatRow
+import com.example.dontforget.data.entity.ConditionDefinitionEntity
+import com.example.dontforget.data.entity.ConditionPhase
+import com.example.dontforget.data.entity.ResultDefinitionEntity
 import com.example.dontforget.data.entity.RunSessionEntity
 import com.example.dontforget.data.repo.HistoryRepo
 import com.example.dontforget.data.repo.HistorySessionBundle
@@ -35,19 +42,78 @@ class HistoryViewModel(
     private val _result_name_map = MutableStateFlow<Map<Long, String>>(emptyMap())
     val result_name_map: StateFlow<Map<Long, String>> = _result_name_map
 
+    // ✅ 정의 리스트(선택용)
+    private val _condition_defs = MutableStateFlow<List<ConditionDefinitionEntity>>(emptyList())
+    val condition_defs: StateFlow<List<ConditionDefinitionEntity>> = _condition_defs
+
+    private val _result_defs = MutableStateFlow<List<ResultDefinitionEntity>>(emptyList())
+    val result_defs: StateFlow<List<ResultDefinitionEntity>> = _result_defs
+
+    private val _item_options = MutableStateFlow<List<ItemOptionRow>>(emptyList())
+    val item_options: StateFlow<List<ItemOptionRow>> = _item_options
+
+    // ✅ 통계 결과
+    private val _condition_stat_rows = MutableStateFlow<List<ConditionStatRow>>(emptyList())
+    val condition_stat_rows: StateFlow<List<ConditionStatRow>> = _condition_stat_rows
+
+    private val _summary_stat_rows = MutableStateFlow<List<SummaryStatRow>>(emptyList())
+    val summary_stat_rows: StateFlow<List<SummaryStatRow>> = _summary_stat_rows
+
+    private val _item_stat_rows = MutableStateFlow<List<ItemDateAggRow>>(emptyList())
+    val item_stat_rows: StateFlow<List<ItemDateAggRow>> = _item_stat_rows
+
     fun load_recent_dates(days: Int = 30) {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val from = now - days.toLong() * 24L * 60L * 60L * 1000L
+            val (from, to) = range_ms(days)
 
-            _date_rows.value = repo.get_date_aggs(from, now + 1L)
+            _date_rows.value = repo.get_date_aggs(from, to)
 
             val cond_defs = repo.get_condition_defs()
             _condition_name_map.value = cond_defs.associate { it.condition_def_id to it.name }
+            _condition_defs.value = cond_defs
 
             val res_defs = repo.get_result_defs()
             _result_name_map.value = res_defs.associate { it.result_def_id to it.name }
+            _result_defs.value = res_defs
         }
+    }
+
+    fun load_item_options() {
+        viewModelScope.launch {
+            _item_options.value = repo.get_item_options()
+        }
+    }
+
+    fun load_condition_stats(
+        condition_def_id: Long,
+        days: Int,
+        phase: ConditionPhase = ConditionPhase.START // ✅ 기본 START
+    ) {
+        viewModelScope.launch {
+            val (from, to) = range_ms(days)
+            _condition_stat_rows.value = repo.get_condition_stats(from, to, condition_def_id, phase)
+        }
+    }
+
+    fun load_summary_stats(result_def_id: Long, days: Int) {
+        viewModelScope.launch {
+            val (from, to) = range_ms(days)
+            _summary_stat_rows.value = repo.get_summary_stats(from, to, result_def_id)
+        }
+    }
+
+    fun load_item_stats(item_id: Long, days: Int) {
+        viewModelScope.launch {
+            val (from, to) = range_ms(days)
+            _item_stat_rows.value = repo.get_item_date_aggs(from, to, item_id)
+        }
+    }
+
+    private fun range_ms(days: Int): Pair<Long, Long> {
+        val now = System.currentTimeMillis()
+        val from = now - days.toLong() * 24L * 60L * 60L * 1000L
+        val to = now + 1L
+        return from to to
     }
 
     fun select_date(date_yyyy_mm_dd: String) {
