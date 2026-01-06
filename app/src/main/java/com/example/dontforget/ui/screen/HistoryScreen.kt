@@ -32,6 +32,8 @@ import kotlin.math.abs
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import kotlin.math.max
 import kotlin.math.min
 
@@ -1896,8 +1898,9 @@ private fun InteractiveLineChartV2(
     labelAt: (Int) -> String,      // 날짜 등
     valueAt: (Int) -> Float,       // y 값
     valueTextAt: (Int) -> String,  // 말풍선에 표시할 수치 문자열
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
     if (count <= 0) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("데이터 없음", color = Color.Gray)
@@ -1911,10 +1914,15 @@ private fun InteractiveLineChartV2(
 
     var pickedIdx by remember { mutableStateOf<Int?>(null) }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val density = LocalDensity.current
-        val boxW = with(density) { maxWidth.toPx() }
-        val boxH = with(density) { maxHeight.toPx() }
+    var boxSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onSizeChanged { boxSize = it }
+    ) {
+        val boxW = boxSize.width.toFloat()
+        val boxH = boxSize.height.toFloat()
 
         val padL = 32f
         val padR = 12f
@@ -2022,7 +2030,7 @@ private fun InteractiveLineChartV2(
 
                 val tooltipW = with(density) { 170.dp.toPx() }
                 val tooltipH = with(density) { 60.dp.toPx() }
-                val margin = with(density) { 8.dp.toPx() }
+                val margin   = with(density) { 8.dp.toPx() }
 
                 // 기본 위치: 점 위쪽(위로 뜨게)
                 var left = x - tooltipW / 2f
@@ -2036,7 +2044,7 @@ private fun InteractiveLineChartV2(
                 top = clampF(top, margin, boxH - tooltipH - margin)
 
                 val leftDp = with(density) { left.toDp() }
-                val topDp = with(density) { top.toDp() }
+                val topDp  = with(density) { top.toDp() }
 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White),
