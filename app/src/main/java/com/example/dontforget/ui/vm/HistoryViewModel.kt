@@ -3,6 +3,8 @@ package com.example.dontforget.ui.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.dontforget.data.analysis.AnalysisRange
+import com.example.dontforget.data.analysis.AnalysisReport
 import com.example.dontforget.data.dao.ConditionStatRow
 import com.example.dontforget.data.dao.ItemDateAggRow
 import com.example.dontforget.data.dao.ItemOptionRow
@@ -12,6 +14,7 @@ import com.example.dontforget.data.entity.ConditionDefinitionEntity
 import com.example.dontforget.data.entity.ConditionPhase
 import com.example.dontforget.data.entity.ResultDefinitionEntity
 import com.example.dontforget.data.entity.RunSessionEntity
+import com.example.dontforget.data.repo.AnalysisRepo
 import com.example.dontforget.data.repo.HistoryRepo
 import com.example.dontforget.data.repo.HistorySessionBundle
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +24,8 @@ import java.util.Calendar
 import java.util.TimeZone
 
 class HistoryViewModel(
-    private val repo: HistoryRepo
+    private val repo: HistoryRepo,
+    private val analysis_repo: AnalysisRepo
 ) : ViewModel() {
 
     private val _date_rows = MutableStateFlow<List<RunDateAggRow>>(emptyList())
@@ -62,6 +66,34 @@ class HistoryViewModel(
     private val _item_stat_rows = MutableStateFlow<List<ItemDateAggRow>>(emptyList())
     val item_stat_rows: StateFlow<List<ItemDateAggRow>> = _item_stat_rows
 
+    // ✅ 분석 기간 상태
+    private val _analysis_range = MutableStateFlow(value = AnalysisRange.D30)
+    val analysis_range: StateFlow<AnalysisRange> = _analysis_range
+
+    // ✅ 분석 결과(히스토리 메인에 띄울 내용)
+    private val _analysis_report = MutableStateFlow<AnalysisReport?>(value = null)
+    val analysis_report: StateFlow<AnalysisReport?> = _analysis_report
+
+    fun set_analysis_range(r: AnalysisRange) {
+        _analysis_range.value = r
+        load_analysis_report()
+    }
+
+    fun load_analysis_report() {
+        viewModelScope.launch {
+            // ✅ 분석은 AnalysisRepo가 계산(ALL이면 null 처리도 AnalysisRepo에서)
+            _analysis_report.value = analysis_repo.build_report(_analysis_range.value)
+        }
+    }
+
+    fun set_analysis_report(r: AnalysisReport) {
+        _analysis_report.value = r
+    }
+
+    fun clear_analysis_report() {
+        _analysis_report.value = null
+    }
+
     fun load_recent_dates(days: Int = 30) {
         viewModelScope.launch {
             val (from, to) = range_ms(days)
@@ -87,7 +119,7 @@ class HistoryViewModel(
     fun load_condition_stats(
         condition_def_id: Long,
         days: Int,
-        phase: ConditionPhase = ConditionPhase.START // ✅ 기본 START
+        phase: ConditionPhase = ConditionPhase.START
     ) {
         viewModelScope.launch {
             val (from, to) = range_ms(days)
@@ -164,12 +196,14 @@ class HistoryViewModel(
 }
 
 class HistoryVmFactory(
-    private val repo: HistoryRepo
+    private val repo: HistoryRepo,
+    private val analysis_repo: AnalysisRepo
 ) : ViewModelProvider.Factory {
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HistoryViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return HistoryViewModel(repo) as T
+            return HistoryViewModel(repo, analysis_repo) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

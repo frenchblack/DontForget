@@ -36,7 +36,8 @@ fun AppRoot(
     items_vm: ItemsViewModel,
     run_vm: RunViewModel,
     today_vm: TodaySummaryViewModel,
-    history_vm: HistoryViewModel
+    history_vm: HistoryViewModel,
+    analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel
 ) {
     var tab by remember { mutableStateOf(Tab.RUN) }
 
@@ -106,6 +107,7 @@ fun AppRoot(
 
             Tab.HISTORY -> HistoryScreen(
                 vm = history_vm,
+                analysis_vm = analysis_vm,
                 modifier = Modifier.padding(padding)
             )
 

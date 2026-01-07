@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import com.example.dontforget.data.analysis.AnalysisRange
 import kotlin.math.max
 import kotlin.math.min
 
@@ -54,6 +55,7 @@ private val STAT_SECTION_MIN_HEIGHT = 180.dp
 @Composable
 fun HistoryScreen(
     vm: HistoryViewModel,
+    analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel,
     modifier: Modifier = Modifier
 ) {
     var view_type by remember { mutableStateOf<HistoryViewType?>(null) }  // ✅ 초기 null
@@ -105,7 +107,7 @@ fun HistoryScreen(
                 HistoryViewType.STATS_TIME -> StatsTimeScreen(vm = vm)
                 HistoryViewType.STATS_SUMMARY -> StatsSummaryScreen(vm = vm)
 
-                HistoryViewType.ANALYSIS -> SimpleCard("분석(테스트)", "최근 추이 기반 코멘트 출력")
+                HistoryViewType.ANALYSIS -> AnalysisScreen(vm = vm)
             }
         }
     }
@@ -121,6 +123,17 @@ fun HistoryScreen(
 
                     if (pick_tab != PickTab.DATE) {
                         Button(onClick = {
+                            if (pick_tab == PickTab.ANALYSIS) {
+                                // ✅ 분석은 적용 누르면 즉시 생성 -> 히스토리 메인에 띄움
+                                analysis_vm.build { rep ->
+                                    vm.set_analysis_report(rep)
+                                    view_type = HistoryViewType.ANALYSIS
+                                    sheet_open = false
+                                }
+                                return@Button
+                            }
+
+                            // ✅ 통계는 기존 로직 유지
                             view_type = when (pick_tab) {
                                 PickTab.STATS -> when (stats_pick) {
                                     StatsPickType.CONDITION -> HistoryViewType.STATS_CONDITION
@@ -129,8 +142,9 @@ fun HistoryScreen(
                                     StatsPickType.SUMMARY -> HistoryViewType.STATS_SUMMARY
                                 }
                                 PickTab.ANALYSIS -> HistoryViewType.ANALYSIS
-                                PickTab.DATE -> HistoryViewType.DATE_DETAIL // 사실 DATE는 세션 클릭으로 처리
+                                PickTab.DATE -> HistoryViewType.DATE_DETAIL
                             }
+
                             sheet_open = false
                         }) { Text("적용") }
                     }
@@ -2091,6 +2105,145 @@ private fun score_to_kor(score: Int): String = when (score) {
     4 -> "좋음"
     5 -> "매우좋음"
     else -> "-"
+}
+@Composable
+private fun AnalysisPickPanel(
+    analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel
+) {
+    val range by analysis_vm.range.collectAsState()
+    val loading by analysis_vm.loading.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("분석", color = Color.Black)
+        Text("기간 선택 후 '적용'을 누르면 히스토리 메인에 분석 결과가 표시됩니다", color = Color.Black)
+
+        SingleChoiceSegmentedButtonRow {
+            com.example.dontforget.data.analysis.AnalysisRange.entries.forEachIndexed { idx, r ->
+                SegmentedButton(
+                    selected = (range == r),
+                    onClick = { analysis_vm.set_range(r) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = idx,
+                        count = com.example.dontforget.data.analysis.AnalysisRange.entries.size
+                    )
+                ) { Text(r.label) }
+            }
+        }
+
+        if (loading) Text("분석 생성중…", color = Color.Gray)
+    }
+}
+
+@Composable
+private fun AnalysisScreen(vm: HistoryViewModel) {
+    val range by vm.analysis_range.collectAsState()
+    val report by vm.analysis_report.collectAsState()
+
+    // ✅ 분석 화면 들어오면 기본 1회 로드
+    LaunchedEffect(Unit) {
+        vm.load_analysis_report()
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text("분석 리포트", style = MaterialTheme.typography.titleLarge, color = Color.Black)
+                Spacer(Modifier.height(8.dp))
+
+                // ✅ 기간 선택(7/30/90/전체)
+                AnalysisRangeSelector(
+                    current = range,
+                    on_select = { vm.set_analysis_range(it) }
+                )
+
+                Spacer(Modifier.height(6.dp))
+                Text("기간: ${range.label}", color = Color.Black)
+                Divider()
+            }
+
+            if (report == null) {
+                item {
+                    Text("데이터가 부족하거나 아직 계산되지 않았습니다.", color = Color(0xFF666666))
+                }
+                return@LazyColumn
+            }
+
+            // ✅ 아래는 report 출력 (필드명은 너 report 모델에 맞춰 조정)
+            item {
+                Text("요약", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+                Text(report!!.one_liner, color = Color.Black)
+                Divider()
+            }
+
+            item {
+                Text("포커스 TOP", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+                if (report!!.focus_top3.isEmpty()) {
+                    Text("데이터 부족", color = Color(0xFF666666))
+                }
+            }
+
+            items(report!!.focus_top3.size) { idx ->
+                val r = report!!.focus_top3[idx]
+                Text(
+                    text = "${idx + 1}. ${r.title}  (성공 ${r.success_sum} / 실패 ${r.fail_sum} / 취소 ${r.cancel_sum} · ${com.example.dontforget.data.analysis.AnalysisCalc.pct(r.rate)})",
+                    color = Color.Black
+                )
+            }
+
+            item { Divider() }
+
+            item {
+                Text("리스크 TOP", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+                if (report!!.risk_top3.isEmpty()) {
+                    Text("실패 데이터 없음", color = Color(0xFF666666))
+                }
+            }
+
+            items(report!!.risk_top3.size) { idx ->
+                val r = report!!.risk_top3[idx]
+                Text(
+                    text = "${idx + 1}. ${r.title}  (성공 ${r.success_sum} / 실패 ${r.fail_sum} / 취소 ${r.cancel_sum} · ${com.example.dontforget.data.analysis.AnalysisCalc.pct(r.rate)})",
+                    color = Color.Black
+                )
+            }
+
+            item {
+                Divider()
+                Text("추천 액션(최대 8)", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+            }
+
+            items(report!!.actions.size) { i ->
+                Text("• ${report!!.actions[i]}", color = Color.Black)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnalysisRangeSelector(
+    current: AnalysisRange,
+    on_select: (AnalysisRange) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow {
+        AnalysisRange.entries.forEachIndexed { idx, r ->
+            SegmentedButton(
+                selected = (current == r),
+                onClick = { on_select(r) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = idx,
+                    count = AnalysisRange.entries.size
+                )
+            ) { Text(r.label) }
+        }
+    }
 }
 
 private enum class PickTab { DATE, STATS, ANALYSIS }

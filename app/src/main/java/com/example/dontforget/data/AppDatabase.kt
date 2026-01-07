@@ -46,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
     // ✅ 오늘정리(자기평가)
     abstract fun result_definition_dao(): ResultDefinitionDao
     abstract fun run_summary_dao(): RunSummaryDao
+    abstract fun analysisDao(): com.example.dontforget.data.dao.AnalysisDao
 
     // abstract fun run_dao(): RunDao
 }

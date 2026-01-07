@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
@@ -20,6 +21,7 @@ import com.example.dontforget.data.repo.ResultRepo
 import com.example.dontforget.data.repo.RunRepo
 import com.example.dontforget.ui.AppRoot
 import com.example.dontforget.ui.theme.DontForgetTheme
+import com.example.dontforget.ui.vm.AnalysisVmFactory
 import com.example.dontforget.ui.vm.HistoryViewModel
 import com.example.dontforget.ui.vm.HistoryVmFactory
 import com.example.dontforget.ui.vm.ItemsViewModel
@@ -117,7 +119,12 @@ class MainActivity : ComponentActivity() {
             condition_def_dao = db.condision_dao(),
             result_def_dao = db.result_definition_dao()
         )
-        val history_factory = HistoryVmFactory(history_repo)
+        val analysis_repo = com.example.dontforget.data.repo.AnalysisRepo(db.analysisDao())
+
+        val history_factory = HistoryVmFactory(
+            repo = history_repo,
+            analysis_repo = analysis_repo
+        )
 
         setContent {
             DontForgetTheme {
@@ -125,12 +132,17 @@ class MainActivity : ComponentActivity() {
                 val run_vm: RunViewModel = viewModel(factory = run_factory)
                 val today_vm: TodaySummaryViewModel = viewModel(factory = today_factory)
                 val history_vm: HistoryViewModel = viewModel(factory = history_factory)
+                val analysis_vm = ViewModelProvider(
+                    this,
+                    AnalysisVmFactory(analysis_repo)
+                )[com.example.dontforget.ui.vm.AnalysisViewModel::class.java]
 
                 AppRoot(
                     items_vm = items_vm,
                     run_vm = run_vm,
                     today_vm = today_vm,
-                    history_vm = history_vm
+                    history_vm = history_vm,
+                    analysis_vm = analysis_vm
                 )
             }
         }

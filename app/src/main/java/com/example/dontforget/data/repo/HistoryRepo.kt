@@ -1,5 +1,6 @@
 package com.example.dontforget.data.repo
 
+import com.example.dontforget.data.analysis.AnalysisReport
 import com.example.dontforget.data.dao.ConditionDefinitionDao
 import com.example.dontforget.data.dao.ConditionStatRow
 import com.example.dontforget.data.dao.ItemDateAggRow
