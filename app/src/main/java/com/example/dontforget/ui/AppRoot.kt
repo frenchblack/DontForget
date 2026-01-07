@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.example.dontforget.ui.screen.HistoryScreen
 import com.example.dontforget.ui.screen.ItemsScreen
 import com.example.dontforget.ui.screen.RunScreen
+import com.example.dontforget.ui.screen.SettingsScreen
 import com.example.dontforget.ui.vm.HistoryViewModel
 import com.example.dontforget.ui.vm.ItemsViewModel
 import com.example.dontforget.ui.vm.RunViewModel
@@ -37,7 +38,9 @@ fun AppRoot(
     run_vm: RunViewModel,
     today_vm: TodaySummaryViewModel,
     history_vm: HistoryViewModel,
-    analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel
+    analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel,
+    condition_manage_vm: com.example.dontforget.ui.vm.ConditionDefManageViewModel,
+    result_manage_vm: com.example.dontforget.ui.vm.ResultDefManageViewModel
 ) {
     var tab by remember { mutableStateOf(Tab.RUN) }
 
@@ -111,7 +114,9 @@ fun AppRoot(
                 modifier = Modifier.padding(padding)
             )
 
-            Tab.SETTINGS -> SettingsTestScreen(
+            Tab.SETTINGS -> SettingsScreen(
+                condition_vm = condition_manage_vm,
+                result_vm = result_manage_vm,
                 modifier = Modifier.padding(padding)
             )
         }

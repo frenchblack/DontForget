@@ -126,6 +126,12 @@ class MainActivity : ComponentActivity() {
             analysis_repo = analysis_repo
         )
 
+        val condition_manage_repo = com.example.dontforget.data.repo.ConditionDefManageRepo(db.condision_dao())
+        val condition_manage_factory = com.example.dontforget.ui.vm.ConditionDefManageVmFactory(condition_manage_repo)
+
+        val result_manage_repo = com.example.dontforget.data.repo.ResultDefManageRepo(db.result_definition_dao())
+        val result_manage_factory = com.example.dontforget.ui.vm.ResultDefManageVmFactory(result_manage_repo)
+
         setContent {
             DontForgetTheme {
                 val items_vm: ItemsViewModel = viewModel(factory = factory)
@@ -136,13 +142,20 @@ class MainActivity : ComponentActivity() {
                     this,
                     AnalysisVmFactory(analysis_repo)
                 )[com.example.dontforget.ui.vm.AnalysisViewModel::class.java]
+                val condition_manage_vm: com.example.dontforget.ui.vm.ConditionDefManageViewModel =
+                    viewModel(factory = condition_manage_factory)
+
+                val result_manage_vm: com.example.dontforget.ui.vm.ResultDefManageViewModel =
+                    viewModel(factory = result_manage_factory)
 
                 AppRoot(
                     items_vm = items_vm,
                     run_vm = run_vm,
                     today_vm = today_vm,
                     history_vm = history_vm,
-                    analysis_vm = analysis_vm
+                    analysis_vm = analysis_vm,
+                    condition_manage_vm = condition_manage_vm,
+                    result_manage_vm = result_manage_vm
                 )
             }
         }

@@ -55,4 +55,30 @@ interface ResultDefinitionDao {
      ORDER BY item_id DESC
 """)
     suspend fun get_active_list(): List<CheckItemEntity>
+
+    @Query("""
+    SELECT *
+      FROM result_definition
+     ORDER BY is_active DESC, sort_order ASC, result_def_id ASC
+""")
+    fun observe_all_ordered(): Flow<List<ResultDefinitionEntity>>
+
+    @Insert
+    suspend fun insert_one(entity: ResultDefinitionEntity): Long
+
+    @Query("""
+    UPDATE result_definition
+       SET name = :name
+         , is_active = :is_active
+         , sort_order = :sort_order
+     WHERE result_def_id = :id
+""")
+    suspend fun update_basic(id: Long, name: String, is_active: Int, sort_order: Int)
+
+    @Query("""
+    UPDATE result_definition
+       SET is_active = 0
+     WHERE result_def_id = :id
+""")
+    suspend fun deactivate(id: Long)
 }

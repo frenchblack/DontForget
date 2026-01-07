@@ -38,4 +38,30 @@ interface ConditionDefinitionDao {
     ORDER BY sort_order ASC, condition_def_id ASC
 """)
     suspend fun get_all_active(): List<ConditionDefinitionEntity>
+
+    @Query("""
+    SELECT *
+      FROM condition_definition
+     ORDER BY is_active DESC, sort_order ASC, condition_def_id ASC
+""")
+    fun observe_all_ordered(): Flow<List<ConditionDefinitionEntity>>
+
+    @Insert
+    suspend fun insert_one(entity: ConditionDefinitionEntity): Long
+
+    @Query("""
+    UPDATE condition_definition
+       SET name = :name
+         , is_active = :is_active
+         , sort_order = :sort_order
+     WHERE condition_def_id = :id
+""")
+    suspend fun update_basic(id: Long, name: String, is_active: Int, sort_order: Int)
+
+    @Query("""
+    UPDATE condition_definition
+       SET is_active = 0
+     WHERE condition_def_id = :id
+""")
+    suspend fun deactivate(id: Long)
 }
