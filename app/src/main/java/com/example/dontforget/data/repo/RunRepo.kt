@@ -142,4 +142,30 @@ class RunRepo(
     suspend fun clear_one(session_id: Long, item_id: Long) {
         dao.clear_one(session_id, item_id)
     }
+    suspend fun save_conditions_phase(
+        session_id: Long,
+        phase: ConditionPhase,
+        items: List<RunConditionEntity>
+    ) {
+        condition_dao.delete_by_session_phase(session_id, phase)
+        if (items.isNotEmpty()) {
+            condition_dao.insert_all(items)
+        }
+    }
+    suspend fun append_conditions_phase(
+        session_id: Long,
+        phase: ConditionPhase,
+        items: List<RunConditionEntity>
+    ) {
+        // ✅ MID는 누적 저장이므로 delete 절대 금지
+        if (items.isNotEmpty()) {
+            condition_dao.insert_all(items)
+        }
+    }
+
+    // ✅ 편의용: MID 전용
+    suspend fun append_conditions_mid(
+        session_id: Long,
+        items: List<RunConditionEntity>
+    ) = append_conditions_phase(session_id, ConditionPhase.MID, items)
 }

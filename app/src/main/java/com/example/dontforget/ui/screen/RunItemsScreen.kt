@@ -2,10 +2,12 @@ package com.example.dontforget.ui.screen
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -20,19 +22,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Dialog
+import com.example.dontforget.data.entity.ConditionLevel
+import com.example.dontforget.data.entity.InputType
+import com.example.dontforget.ui.vm.RunViewModel
 
 private enum class PracticeTab { PROCESS, COMPLETE }
 
 @Composable
 fun RunItemsScreen(
     items_vm: ItemsViewModel,
+    run_vm: RunViewModel,
     sessionId: Long?,
     startedAt: Long?,
     onFinish: () -> Unit,
     onBack: () -> Unit
 ) {
     val active by items_vm.active.collectAsStateWithLifecycle()
-
+    var condition_mid_dialog_open by remember { mutableStateOf(false) }
     // ✅ completed_ids Flow를 매 리컴포지션마다 새로 만들지 않도록 고정
     val completed_ids_state = remember(sessionId) {
         if (sessionId != null) items_vm.completed_ids(sessionId) else null
@@ -165,7 +173,9 @@ fun RunItemsScreen(
                             text = { Text("컨디션 추가", color = Color.Black) },
                             onClick = {
                                 menu_open = false
-                                // TODO
+                                if (sessionId != null) {
+                                    condition_mid_dialog_open = true
+                                }
                             }
                         )
                         DropdownMenuItem(
@@ -423,6 +433,18 @@ fun RunItemsScreen(
             }
         )
     }
+
+    if (condition_mid_dialog_open) {
+        val sid = sessionId
+        if (sid != null) {
+            RunConditionMidDialog_NewOnly(
+                run_vm = run_vm,
+                sessionId = sid,
+                onDismiss = { condition_mid_dialog_open = false }
+            )
+        }
+    }
+
 }
 
 @Composable
@@ -489,3 +511,282 @@ private fun RunItemCard(
         }
     }
 }
+
+@Composable
+private fun RunConditionMidDialog_NewOnly(
+    run_vm: RunViewModel,
+    sessionId: Long,
+    onDismiss: () -> Unit
+) {
+    val defs = run_vm.condition_defs.collectAsStateWithLifecycle().value
+
+    // ✅ 매번 신규 입력(로드 없음)
+    val value_code_map = remember(sessionId) { mutableStateMapOf<Long, String>() }
+    val value_text_map = remember(sessionId) { mutableStateMapOf<Long, String>() }
+
+    // ✅ LEVEL_5 기본값: 보통(처음 열었을 때만)
+    LaunchedEffect(defs, sessionId) {
+        if (defs.isEmpty()) return@LaunchedEffect
+        val default_level = ConditionLevel.entries.firstOrNull { it.label == "보통" } ?: return@LaunchedEffect
+
+        defs.filter { it.input_type == InputType.LEVEL_5 }.forEach { def ->
+            if (value_code_map[def.condition_def_id].isNullOrBlank()) {
+                value_code_map[def.condition_def_id] = default_level.code
+            }
+        }
+    }
+
+    var cancel_confirm_open by remember { mutableStateOf(false) }
+    var save_confirm_open by remember { mutableStateOf(false) }
+
+    val black_textfield_colors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.Black,
+        unfocusedTextColor = Color.Black,
+        disabledTextColor = Color.Black,
+        errorTextColor = Color.Black,
+
+        focusedLabelColor = Color.Black,
+        unfocusedLabelColor = Color.Black,
+        disabledLabelColor = Color.Black,
+        errorLabelColor = Color.Black,
+
+        cursorColor = Color.Black,
+
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White,
+        disabledContainerColor = Color.White,
+        errorContainerColor = Color.White
+    )
+
+    Dialog(onDismissRequest = { /* 밖 터치로 닫기 방지 */ }) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 420.dp, max = 720.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // 헤더
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "연습중 컨디션 추가",
+                        color = Color.Black,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text("세션: $sessionId", color = Color.Black)
+                }
+
+                Divider(color = Color(0xFFDDDDDD))
+
+                // 리스트(스크롤)
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (defs.isEmpty()) {
+                        item { Text("컨디션 항목이 없습니다.", color = Color.Black) }
+                    } else {
+                        items(defs, key = { it.condition_def_id }) { def ->
+                            Column(modifier = Modifier.fillMaxWidth()) {
+
+                                Text(
+                                    def.name,
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.height(10.dp))
+
+                                when (def.input_type) {
+                                    InputType.LEVEL_5 -> {
+                                        var expanded by remember(def.condition_def_id) { mutableStateOf(false) }
+
+                                        val current_code = value_code_map[def.condition_def_id] ?: ""
+                                        val current_level = ConditionLevel.from_code(current_code)
+                                        val display = current_level?.label ?: "선택"
+
+                                        val memo = value_text_map[def.condition_def_id] ?: ""
+
+                                        Column(Modifier.fillMaxWidth()) {
+
+                                            Box(modifier = Modifier.fillMaxWidth(0.38f)) {
+                                                ElevatedButton(
+                                                    onClick = { expanded = true },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    colors = ButtonDefaults.elevatedButtonColors(
+                                                        containerColor = Color.White,
+                                                        contentColor = Color.Black
+                                                    )
+                                                ) { Text(display, color = Color.Black) }
+
+                                                DropdownMenu(
+                                                    expanded = expanded,
+                                                    onDismissRequest = { expanded = false },
+                                                    modifier = Modifier.background(Color(0xFFE0E0E0))
+                                                ) {
+                                                    ConditionLevel.entries.asReversed().forEach { level ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(level.label, color = Color.Black) },
+                                                            onClick = {
+                                                                value_code_map[def.condition_def_id] = level.code
+                                                                expanded = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Spacer(Modifier.height(10.dp))
+
+                                            OutlinedTextField(
+                                                value = memo,
+                                                onValueChange = { value_text_map[def.condition_def_id] = it },
+                                                label = { Text("추가 설명") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = black_textfield_colors,
+                                                singleLine = false,
+                                                minLines = 3,
+                                                maxLines = 6
+                                            )
+                                        }
+                                    }
+
+                                    InputType.TEXT -> {
+                                        val v = value_text_map[def.condition_def_id] ?: ""
+                                        OutlinedTextField(
+                                            value = v,
+                                            onValueChange = { value_text_map[def.condition_def_id] = it },
+                                            label = { Text(def.name) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = black_textfield_colors
+                                        )
+                                    }
+
+                                    InputType.SCORE -> {
+                                        val v = value_text_map[def.condition_def_id] ?: ""
+                                        OutlinedTextField(
+                                            value = v,
+                                            onValueChange = { value_text_map[def.condition_def_id] = it },
+                                            label = { Text(def.name) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = black_textfield_colors
+                                        )
+                                    }
+
+                                    InputType.TOGGLE -> {
+                                        val v = value_text_map[def.condition_def_id] ?: ""
+                                        OutlinedTextField(
+                                            value = v,
+                                            onValueChange = { value_text_map[def.condition_def_id] = it },
+                                            label = { Text("토글(임시)") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = black_textfield_colors
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider(color = Color(0xFFDDDDDD))
+
+                // 하단 고정 버튼
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = { cancel_confirm_open = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = Color.White
+                        )
+                    ) { Text("취소") }
+
+                    Button(
+                        onClick = { save_confirm_open = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = Color.White
+                        )
+                    ) { Text("저장") }
+                }
+            }
+        }
+    }
+
+    // 취소 확인
+    if (cancel_confirm_open) {
+        AlertDialog(
+            onDismissRequest = { cancel_confirm_open = false },
+            containerColor = Color.White,
+            title = { Text("취소할까?", color = Color.Black, fontWeight = FontWeight.Bold) },
+            text = { Text("입력을 취소하시겠습니까?\n저장하지 않고 종료됩니다.", color = Color.Black) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        cancel_confirm_open = false
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Black,
+                        contentColor = Color.White
+                    )
+                ) { Text("확인") }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { cancel_confirm_open = false },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                ) { Text("취소") }
+            }
+        )
+    }
+
+    // 저장 확인
+    if (save_confirm_open) {
+        AlertDialog(
+            onDismissRequest = { save_confirm_open = false },
+            containerColor = Color.White,
+            title = { Text("저장할까?", color = Color.Black, fontWeight = FontWeight.Bold) },
+            text = { Text("입력한 컨디션을 저장하시겠습니까?", color = Color.Black) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        save_confirm_open = false
+                        run_vm.append_condition_mid(
+                            session_id = sessionId,
+                            value_code_map = value_code_map.toMap(),
+                            value_text_map = value_text_map.toMap(),
+                            on_done = { onDismiss() }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Black,
+                        contentColor = Color.White
+                    )
+                ) { Text("저장") }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { save_confirm_open = false },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                ) { Text("취소") }
+            }
+        )
+    }
+}
+

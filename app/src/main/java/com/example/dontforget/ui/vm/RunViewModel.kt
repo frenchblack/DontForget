@@ -171,6 +171,31 @@ class RunViewModel(
         repo.clear_one(session_id, item_id)
     }
 
+    fun append_condition_mid(
+        session_id: Long,
+        value_code_map: Map<Long, String>,
+        value_text_map: Map<Long, String>,
+        on_done: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val defs = condition_defs.value
+
+            val items = defs.map { def ->
+                RunConditionEntity(
+                    session_id = session_id,
+                    condition_def_id = def.condition_def_id,
+                    value_code = value_code_map[def.condition_def_id] ?: "",
+                    value = value_text_map[def.condition_def_id] ?: "",
+                    phase = ConditionPhase.MID,
+                    created_at = System.currentTimeMillis()
+                )
+            }.filter { it.value_code.isNotBlank() || it.value.isNotBlank() }
+
+            repo.append_conditions_mid(session_id, items)
+            on_done()
+        }
+    }
+
     enum class RunStep {
         HOME,
         CONDITION_START ,

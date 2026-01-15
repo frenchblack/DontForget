@@ -75,6 +75,7 @@ fun RunScreen(
             RunStep.RUN_ITEMS -> {
                 RunItemsScreen(
                     items_vm = items_vm,
+                    run_vm = vm,
                     sessionId = current_session_id,
                     startedAt = started_at,
                     onFinish = {
