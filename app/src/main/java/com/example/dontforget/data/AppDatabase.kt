@@ -32,7 +32,7 @@ import com.example.dontforget.data.entity.RunSummaryEntity
         ConditionDefinitionEntity::class,
         ResultDefinitionEntity::class
     ],
-    version = 7,
+    version = AppSchema.DB_VERSION,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -180,7 +180,7 @@ fun SettingsScreen(
                             import_bundle_text = text
 
                             val bundle = DataPortJson.from_json(text)
-                            val current_schema = 7 // 너 AppDatabase version
+                            val current_schema = com.example.dontforget.data.AppSchema.EXPORT_VERSION // 너 AppDatabase version
                             val err = data_port_repo.validate_bundle(bundle, current_schema)
 
                             if (err != null) {

@@ -32,6 +32,7 @@ import com.example.dontforget.ui.vm.TodaySummaryViewModel
 import com.example.dontforget.ui.vm.TodaySummaryVmFactory
 import kotlinx.coroutines.launch
 
+private const val DEV_SEED_MODE = false
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,40 +44,42 @@ class MainActivity : ComponentActivity() {
             AppDatabase::class.java,
             "dontforget.db"
         )
-//            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration()
             .build()
 
         lifecycleScope.launch {
-            // ✅ 체크항목 시드
-            val check_item_dao = db.check_item_dao()
-            if (check_item_dao.count_all() == 0) {
-                check_item_dao.insert_all(seed_check_items())
+            if(DEV_SEED_MODE)  {
+                // ✅ 체크항목 시드
+                val check_item_dao = db.check_item_dao()
+                if (check_item_dao.count_all() == 0) {
+                    check_item_dao.insert_all(seed_check_items())
+                }
+
+                // ✅ 컨디션 정의 시드 (니가 쓰는 메서드명 그대로: condision_dao())
+                val condition_def_dao = db.condision_dao()
+                if (condition_def_dao.count_all() == 0) {
+                    condition_def_dao.insert_all(seed_condition_definitions())
+                }
+
+                // ✅ 결과 정의 시드 (여기도 코루틴 안에서!)
+                val result_def_dao = db.result_definition_dao()
+                if (result_def_dao.count_all() == 0) {
+                    result_def_dao.insert_all(seed_result_definitions())
+                }
+                Log.d("DF_SEED", "before seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
+                // ✅ ✅ 여기 추가 (런 더미)
+                seed_run_dummy_data_if_empty(db)
+
+                Log.d("DF_SEED", "after seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
+
+
+                val run_item_count = db.run_dao().count_run_items()
+                android.util.Log.d("DF", "run_item count = $run_item_count")
+
+                val recent = db.run_dao().get_recent_run_items()
+                android.util.Log.d("DF", "recent run_item size = ${recent.size}")
+                recent.forEach { android.util.Log.d("DF", "run_item: $it") }
             }
-
-            // ✅ 컨디션 정의 시드 (니가 쓰는 메서드명 그대로: condision_dao())
-            val condition_def_dao = db.condision_dao()
-            if (condition_def_dao.count_all() == 0) {
-                condition_def_dao.insert_all(seed_condition_definitions())
-            }
-
-            // ✅ 결과 정의 시드 (여기도 코루틴 안에서!)
-            val result_def_dao = db.result_definition_dao()
-            if (result_def_dao.count_all() == 0) {
-                result_def_dao.insert_all(seed_result_definitions())
-            }
-            Log.d("DF_SEED", "before seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
-            // ✅ ✅ 여기 추가 (런 더미)
-            seed_run_dummy_data_if_empty(db)
-
-            Log.d("DF_SEED", "after seed: sessions=${db.run_dao().count_sessions()}, run_items=${db.run_dao().count_run_items()}")
-
-
-            val run_item_count = db.run_dao().count_run_items()
-            android.util.Log.d("DF", "run_item count = $run_item_count")
-
-            val recent = db.run_dao().get_recent_run_items()
-            android.util.Log.d("DF", "recent run_item size = ${recent.size}")
-            recent.forEach { android.util.Log.d("DF", "run_item: $it") }
         }
 
 
