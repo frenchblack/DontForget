@@ -168,4 +168,12 @@ class RunRepo(
         session_id: Long,
         items: List<RunConditionEntity>
     ) = append_conditions_phase(session_id, ConditionPhase.MID, items)
+
+    suspend fun abandon_session(session_id: Long) {
+        dao.finish_session(
+            session_id = session_id,
+            end_time = System.currentTimeMillis(),
+            status = RunStatus.ABANDONED
+        )
+    }
 }

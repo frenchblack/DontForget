@@ -47,7 +47,24 @@ class RunViewModel(
 
     fun refresh_in_progress() {
         viewModelScope.launch {
-            _in_progress.value = repo.get_in_progress()
+            val s = repo.get_in_progress()
+
+            if (s == null) {
+                _in_progress.value = null
+                return@launch
+            }
+
+            val now = System.currentTimeMillis()
+            val limit_ms = 24L * 60L * 60L * 1000L // ✅ 24시간
+            val ok = (now - s.start_time) <= limit_ms
+
+            if (ok) {
+                _in_progress.value = s
+            } else {
+                // ✅ 24시간 지난 진행중 세션은 이어하기 대상에서 제외 + DB도 정리
+                repo.abandon_session(s.session_id)
+                _in_progress.value = null
+            }
         }
     }
 
