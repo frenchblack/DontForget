@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import com.example.dontforget.data.dao.CheckItemDao
 import com.example.dontforget.data.dao.RunDao
 import com.example.dontforget.data.dao.ConditionDefinitionDao
+import com.example.dontforget.data.dao.DataPortDao
 import com.example.dontforget.data.dao.ResultDefinitionDao
 import com.example.dontforget.data.dao.RunConditionDao
 import com.example.dontforget.data.dao.RunItemProgressDao
@@ -47,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun result_definition_dao(): ResultDefinitionDao
     abstract fun run_summary_dao(): RunSummaryDao
     abstract fun analysisDao(): com.example.dontforget.data.dao.AnalysisDao
+    abstract fun data_port_dao(): DataPortDao
 
     // abstract fun run_dao(): RunDao
 }

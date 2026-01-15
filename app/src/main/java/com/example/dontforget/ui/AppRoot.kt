@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.dontforget.data.repo.DataPortRepo
 import com.example.dontforget.ui.screen.HistoryScreen
 import com.example.dontforget.ui.screen.ItemsScreen
 import com.example.dontforget.ui.screen.RunScreen
@@ -40,7 +41,8 @@ fun AppRoot(
     history_vm: HistoryViewModel,
     analysis_vm: com.example.dontforget.ui.vm.AnalysisViewModel,
     condition_manage_vm: com.example.dontforget.ui.vm.ConditionDefManageViewModel,
-    result_manage_vm: com.example.dontforget.ui.vm.ResultDefManageViewModel
+    result_manage_vm: com.example.dontforget.ui.vm.ResultDefManageViewModel,
+    data_port_repo: DataPortRepo
 ) {
     var tab by remember { mutableStateOf(Tab.RUN) }
 
@@ -117,6 +119,7 @@ fun AppRoot(
             Tab.SETTINGS -> SettingsScreen(
                 condition_vm = condition_manage_vm,
                 result_vm = result_manage_vm,
+                data_port_repo = data_port_repo,
                 modifier = Modifier.padding(padding)
             )
         }

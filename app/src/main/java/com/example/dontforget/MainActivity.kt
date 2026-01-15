@@ -132,6 +132,8 @@ class MainActivity : ComponentActivity() {
         val result_manage_repo = com.example.dontforget.data.repo.ResultDefManageRepo(db.result_definition_dao())
         val result_manage_factory = com.example.dontforget.ui.vm.ResultDefManageVmFactory(result_manage_repo)
 
+        val data_port_repo = com.example.dontforget.data.repo.DataPortRepo(db)
+
         setContent {
             DontForgetTheme {
                 val items_vm: ItemsViewModel = viewModel(factory = factory)
@@ -155,7 +157,8 @@ class MainActivity : ComponentActivity() {
                     history_vm = history_vm,
                     analysis_vm = analysis_vm,
                     condition_manage_vm = condition_manage_vm,
-                    result_manage_vm = result_manage_vm
+                    result_manage_vm = result_manage_vm,
+                    data_port_repo = data_port_repo
                 )
             }
         }
